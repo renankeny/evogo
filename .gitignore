@@ -1,0 +1,25 @@
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Binaries & build artifacts
+/evolution-go
+/server
+build/
+*.prof
+coverage.*
+
+# Dependencies
+node_modules/
+manager/node_modules/
+manager/dist.bak/
+
+# Logs & temp
+logs/*
+*.log
+.air.toml
+.idea/
+.vscode/
+.DS_Store
+.agents/
