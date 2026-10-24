@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Smartphone } from "lucide-react";
 import { useInstances } from "@/hooks/useInstances";
@@ -14,12 +14,13 @@ export default function InstancesPage() {
   const {
     instances,
     loading,
+    fetchInstances,
     createInstance,
     connectInstance,
     disconnectInstance,
     deleteInstance,
     getQrCode,
-  } = useInstances(5000);
+  } = useInstances(3000);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -32,6 +33,38 @@ export default function InstancesPage() {
   const [instanceToDelete, setInstanceToDelete] = useState<InstanceDTO | null>(null);
   const [instanceToDisconnect, setInstanceToDisconnect] = useState<InstanceDTO | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Monitora em tempo real se a instância selecionada no modal conectou
+  const activeSelectedInstance = selectedInstance
+    ? instances.find((i) => i.id === selectedInstance.id || i.name === selectedInstance.name)
+    : null;
+
+  const isModalConnected = Boolean(
+    activeSelectedInstance?.connected || activeSelectedInstance?.status === "open"
+  );
+
+  // Polling rápido (1.5s) enquanto o modal do QR code estiver aberto aguardando conexão
+  useEffect(() => {
+    if (!isQrModalOpen || isModalConnected) return;
+
+    const timer = setInterval(() => {
+      fetchInstances(true);
+    }, 1500);
+
+    return () => clearInterval(timer);
+  }, [isQrModalOpen, isModalConnected, fetchInstances]);
+
+  // Quando detectar que conectou com sucesso, exibe a tela de sucesso e fecha após 1.8s
+  useEffect(() => {
+    if (isQrModalOpen && isModalConnected) {
+      const closeTimer = setTimeout(() => {
+        setIsQrModalOpen(false);
+        setSelectedInstance(null);
+        setQrCodeBase64(undefined);
+      }, 1800);
+      return () => clearTimeout(closeTimer);
+    }
+  }, [isQrModalOpen, isModalConnected]);
 
   const filteredInstances = instances.filter((inst) =>
     inst.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -185,6 +218,7 @@ export default function InstancesPage() {
         qrCodeBase64={qrCodeBase64 || selectedInstance?.qrcode?.base64}
         onRefreshQr={handleRefreshQr}
         loading={qrLoading}
+        isConnected={isModalConnected}
       />
 
       {/* Modal Confirmar Desconexão */}

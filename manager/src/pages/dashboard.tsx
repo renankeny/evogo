@@ -15,7 +15,7 @@ export default function DashboardPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const totalInstances = instances.length;
-  const connectedCount = instances.filter((i) => i.connected).length;
+  const connectedCount = instances.filter((i) => i.connected || i.status === "open").length;
   const disconnectedCount = totalInstances - connectedCount;
   const connectionRate =
     totalInstances > 0 ? Math.round((connectedCount / totalInstances) * 100) : 0;

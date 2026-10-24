@@ -356,71 +356,58 @@ func (i instances) Reconnect(instance *instance_model.Instance) error {
 }
 
 func (i instances) Disconnect(instance *instance_model.Instance) (*instance_model.Instance, error) {
-	client, err := i.ensureClientConnected(instance.Id)
-	if err != nil {
-		return instance, err
+	client := i.clientPointer[instance.Id]
+	if client != nil && client.IsConnected() {
+		client.Disconnect()
 	}
 
-	if client.IsConnected() {
-		if client.IsLoggedIn() {
-			i.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] Disconnection successful", instance.Id)
-			i.killChannel[instance.Id] <- true
+	instance.Connected = false
+	_ = i.instanceRepository.UpdateConnected(instance.Id, false, "user_disconnected")
+	i.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] Disconnection successful", instance.Id)
 
-			return instance, nil
+	if i.killChannel[instance.Id] != nil {
+		select {
+		case i.killChannel[instance.Id] <- true:
+		default:
 		}
 	}
 
-	i.loggerWrapper.GetLogger(instance.Id).LogWarn("[%s] Ignoring disconnect as it was not connected", instance.Id)
 	return instance, nil
 }
 
 func (i instances) Logout(instance *instance_model.Instance) (*instance_model.Instance, error) {
-	client, err := i.ensureClientConnected(instance.Id)
-	if err != nil {
-		return instance, err
+	client := i.clientPointer[instance.Id]
+	if client == nil {
+		instance.Connected = false
+		instance.Jid = ""
+		_ = i.instanceRepository.UpdateConnected(instance.Id, false, "user_logout")
+		_ = i.instanceRepository.UpdateJid(instance.Id, "")
+		return instance, nil
 	}
 
 	if client.IsLoggedIn() && client.IsConnected() {
-		err := client.Logout(context.Background())
-		if err != nil {
-			return instance, err
-		}
-
-		instance.Connected = false
-		err = i.instanceRepository.Update(instance)
-		if err != nil {
-			return instance, err
-		}
-
-		select {
-		case i.killChannel[instance.Id] <- true:
-		case <-time.After(5 * time.Second):
-		}
-
-		delete(i.clientPointer, instance.Id)
-		delete(i.killChannel, instance.Id)
-
-		i.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] Logout successful", instance.Id)
-		return instance, nil
-	}
-
-	if client.IsConnected() {
+		_ = client.Logout(context.Background())
+	} else if client.IsConnected() {
 		client.Disconnect()
-
-		select {
-		case i.killChannel[instance.Id] <- true:
-		case <-time.After(5 * time.Second):
-		}
-
-		delete(i.clientPointer, instance.Id)
-		delete(i.killChannel, instance.Id)
-
-		i.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] Disconnection successful", instance.Id)
-		return instance, nil
 	}
 
-	i.loggerWrapper.GetLogger(instance.Id).LogWarn("[%s] Ignoring logout as it was not connected", instance.Id)
-	return instance, fmt.Errorf("ignoring logout as it was not connected")
+	instance.Connected = false
+	instance.Jid = ""
+	_ = i.instanceRepository.UpdateConnected(instance.Id, false, "user_logout")
+	_ = i.instanceRepository.UpdateJid(instance.Id, "")
+
+	if i.killChannel[instance.Id] != nil {
+		select {
+		case i.killChannel[instance.Id] <- true:
+		case <-time.After(3 * time.Second):
+		}
+	}
+
+	delete(i.clientPointer, instance.Id)
+	delete(i.killChannel, instance.Id)
+
+	i.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] Logout successful", instance.Id)
+	return instance, nil
 }
 
 func (i instances) Status(instance *instance_model.Instance) (*StatusStruct, error) {
@@ -593,7 +580,10 @@ func (i instances) GetAll() ([]*instance_model.Instance, error) {
 
 	for _, instance := range instances {
 		if client := i.clientPointer[instance.Id]; client != nil {
-			instance.Connected = client.IsLoggedIn()
+			instance.Connected = client.IsConnected() && client.IsLoggedIn()
+			if client.Store != nil && client.Store.ID != nil && instance.Jid == "" {
+				instance.Jid = client.Store.ID.String()
+			}
 		} else {
 			instance.Connected = false
 		}
@@ -616,7 +606,10 @@ func (i instances) Info(instanceId string) (*instance_model.Instance, error) {
 
 	// Atualiza o status connected com base no estado real do cliente
 	if client := i.clientPointer[instance.Id]; client != nil {
-		instance.Connected = client.IsLoggedIn()
+		instance.Connected = client.IsConnected() && client.IsLoggedIn()
+		if client.Store != nil && client.Store.ID != nil && instance.Jid == "" {
+			instance.Jid = client.Store.ID.String()
+		}
 	} else {
 		instance.Connected = false
 	}

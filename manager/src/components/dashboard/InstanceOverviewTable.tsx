@@ -66,8 +66,8 @@ export function InstanceOverviewTable({
                   <tr key={inst.id} className="hover:bg-muted/30 transition-colors">
                     <td className="py-3 px-2 font-medium text-foreground">{inst.name}</td>
                     <td className="py-3 px-2">
-                      <Badge variant={inst.connected ? "success" : "destructive"}>
-                        {inst.connected ? "Conectado" : "Desconectado"}
+                      <Badge variant={inst.connected || inst.status === "open" ? "success" : "destructive"}>
+                        {inst.connected || inst.status === "open" ? "Conectado" : "Desconectado"}
                       </Badge>
                     </td>
                     <td className="py-3 px-2 font-mono text-xs text-muted-foreground">

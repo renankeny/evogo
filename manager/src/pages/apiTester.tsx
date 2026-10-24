@@ -20,21 +20,36 @@ export default function ApiTesterPage() {
 
   const presets = [
     { label: "Status do Servidor", method: "GET", endpoint: "/server/ok", body: "" },
+    { label: "Health Check", method: "GET", endpoint: "/health", body: "" },
     { label: "Listar Todas Instâncias", method: "GET", endpoint: "/instance/all", body: "" },
-    { label: "Status da Licença", method: "GET", endpoint: "/license/status", body: "" },
+    { label: "Status da Instância", method: "GET", endpoint: "/instance/status", body: "" },
+    { label: "Obter QR Code", method: "GET", endpoint: "/instance/qr", body: "" },
     {
       label: "Enviar Mensagem de Texto",
       method: "POST",
-      endpoint: "/message/sendText",
+      endpoint: "/send/text",
       body: JSON.stringify(
         {
           number: "5511999999999",
-          textMessage: { text: "Olá do Evolution GO!" },
+          text: "Olá do Evolution GO!",
         },
         null,
         2
       ),
     },
+    {
+      label: "Conectar Instância",
+      method: "POST",
+      endpoint: "/instance/connect",
+      body: JSON.stringify(
+        {
+          subscribe: ["MESSAGE", "SEND_MESSAGE", "CONNECTION"],
+        },
+        null,
+        2
+      ),
+    },
+    { label: "Desconectar Instância", method: "POST", endpoint: "/instance/disconnect", body: "" },
   ];
 
   const handleApplyPreset = (preset: (typeof presets)[0]) => {

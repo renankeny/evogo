@@ -20,7 +20,8 @@ export function InstanceCard({
   onSettings,
   onDelete,
 }: InstanceCardProps) {
-  const isConnected = instance.connected;
+  const isConnected = Boolean(instance.connected || instance.status === "open");
+  const isConnecting = !isConnected && (instance.status === "connecting" || Boolean(instance.qrcode));
 
   return (
     <div className="group relative bg-sidebar border border-sidebar-border hover:bg-sidebar-accent/30 transition-all duration-300 hover:shadow-lg hover:shadow-black/10 overflow-hidden rounded-lg">
@@ -56,11 +57,13 @@ export function InstanceCard({
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                 isConnected
-                  ? "bg-green-500/10 text-green-500"
-                  : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                  ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                  : isConnecting
+                  ? "bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse"
+                  : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
               }`}
             >
-              {isConnected ? "Conectado" : "Desconectado"}
+              {isConnected ? "Conectado" : isConnecting ? "Conectando..." : "Desconectado"}
             </span>
           </div>
         </div>
@@ -68,7 +71,7 @@ export function InstanceCard({
         <div className="px-4 py-3 text-xs text-sidebar-foreground/70 space-y-1">
           <div className="flex items-center justify-between">
             <span>Status</span>
-            <span className="font-mono">{isConnected ? "open" : "close"}</span>
+            <span className="font-mono">{isConnected ? "open" : isConnecting ? "connecting" : "close"}</span>
           </div>
           {instance.owner && (
             <div className="flex items-center justify-between">

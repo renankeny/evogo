@@ -615,9 +615,8 @@ func (w whatsmeowService) StartClient(cd *ClientData) {
 				go mycli.service.SendToGlobalQueues(postMap["event"].(string), values, mycli.userID)
 			}
 
-			// restart client
-			w.loggerWrapper.GetLogger(cd.Instance.Id).LogInfo("[%s] Restarting client", cd.Instance.Id)
-			w.StartClient(cd)
+			// Stop client cleanly
+			w.loggerWrapper.GetLogger(cd.Instance.Id).LogInfo("[%s] Client stopped cleanly on kill signal", cd.Instance.Id)
 			return
 		default:
 			time.Sleep(1000 * time.Millisecond)
@@ -849,6 +848,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 	postMap := make(map[string]interface{})
 	postMap["data"] = rawEvt
 	doWebhook := false
+	var err error
 
 	switch evt := rawEvt.(type) {
 	case *events.QR:
@@ -867,83 +867,84 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		}
 	case *events.Connected, *events.PushNameSetting:
 		mycli.loggerWrapper.GetLogger(mycli.userID).LogInfo("[%s] events.Connected to Whatsapp for user '%s'", mycli.userID, mycli.WAClient.Store.PushName)
-		if len(mycli.WAClient.Store.PushName) > 0 {
-			doWebhook = true
-			postMap["event"] = "Connected"
 
-			if postMap["data"] != nil {
-				jsonBytes, err := json.Marshal(postMap["data"])
-				if err != nil {
-					mycli.loggerWrapper.GetLogger(mycli.userID).LogError("[%s] Failed to marshal postMap['data']: %v", mycli.userID, err)
-					return
-				}
+		// 🔒 FIX CRÍTICO: Sempre atualizar o status no banco de dados e limpar o QR Code,
+		// independentemente de PushName já estar preenchido ou não!
+		mycli.Instance.Connected = true
+		mycli.Instance.DisconnectReason = ""
 
-				var dataMap map[string]interface{}
-				err = json.Unmarshal(jsonBytes, &dataMap)
-				if err != nil {
-					mycli.loggerWrapper.GetLogger(mycli.userID).LogError("[%s] Failed to unmarshal postMap['data'] to map[string]interface{}: %v", mycli.userID, err)
-					return
-				}
-
-				postMap["data"] = dataMap
-			} else {
-				postMap["data"] = make(map[string]interface{})
+		if mycli.WAClient.Store.ID != nil {
+			jidStr := mycli.WAClient.Store.ID.String()
+			mycli.Instance.Jid = jidStr
+			err = mycli.instanceRepository.UpdateJid(mycli.Instance.Id, jidStr)
+			if err != nil {
+				mycli.loggerWrapper.GetLogger(mycli.userID).LogWarn("[%s] Error updating instance JID: %s", mycli.Instance.Id, err)
 			}
 
-			dataMap := postMap["data"].(map[string]interface{})
+			// Atualiza também o cache de UserInfo
+			if myUserInfo, found := mycli.userInfoCache.Get(mycli.token); found {
+				updatedUserInfo := utils.UpdateUserInfo(myUserInfo, "Jid", jidStr)
+				mycli.userInfoCache.Set(mycli.token, updatedUserInfo, cache.NoExpiration)
+			}
+		}
 
-			dataMap["status"] = "open"
-			dataMap["jid"] = mycli.WAClient.Store.ID.String()
-			dataMap["pushName"] = mycli.WAClient.Store.PushName
+		err = mycli.instanceRepository.UpdateConnected(mycli.Instance.Id, mycli.Instance.Connected, mycli.Instance.DisconnectReason)
+		if err != nil {
+			mycli.loggerWrapper.GetLogger(mycli.userID).LogError("[%s] Error updating instance connected status: %s", mycli.Instance.Id, err)
+		}
 
-			// jid, ok := utils.ParseJID(mycli.WAClient.Store.ID.ToNonAD().User)
-			// if ok {
-			// 	profilePicUrl, err := mycli.clientPointer[mycli.userID].GetProfilePictureInfo(jid, &whatsmeow.GetProfilePictureParams{
-			// 		Preview: false,
-			// 	})
-			// 	if err != nil {
-			// 		w.loggerWrapper.GetLogger(instanceId).LogError("[%s] Failed to get profile picture info: %v", mycli.userID, err)
-			// 	} else {
-			// 		dataMap["profilePicUrl"] = profilePicUrl.URL
-			// 	}
-			// }
+		err = mycli.instanceRepository.UpdateQrcode(mycli.Instance.Id, "")
+		if err != nil {
+			mycli.loggerWrapper.GetLogger(mycli.userID).LogError("[%s] Error clearing instance qrcode: %s", mycli.Instance.Id, err)
+		}
+
+		doWebhook = true
+		postMap["event"] = "Connected"
+
+		if postMap["data"] != nil {
+			jsonBytes, err := json.Marshal(postMap["data"])
+			if err != nil {
+				mycli.loggerWrapper.GetLogger(mycli.userID).LogError("[%s] Failed to marshal postMap['data']: %v", mycli.userID, err)
+				return
+			}
+
+			var dataMap map[string]interface{}
+			err = json.Unmarshal(jsonBytes, &dataMap)
+			if err != nil {
+				mycli.loggerWrapper.GetLogger(mycli.userID).LogError("[%s] Failed to unmarshal postMap['data'] to map[string]interface{}: %v", mycli.userID, err)
+				return
+			}
 
 			postMap["data"] = dataMap
+		} else {
+			postMap["data"] = make(map[string]interface{})
+		}
 
-			// Respect the alwaysOnline instance flag. Previously the device was marked
-			// online unconditionally on every connect (and the periodic presence job was
-			// started), which kept the linked device permanently "available". WhatsApp then
-			// delivers messages to that active session and suppresses push notifications on
-			// the user's phone. When alwaysOnline is false we now send Unavailable instead.
-			var err error
-			if mycli.Instance.AlwaysOnline {
-				go schedulePresenceUpdates(mycli)
+		dataMap := postMap["data"].(map[string]interface{})
+		dataMap["status"] = "open"
+		if mycli.WAClient.Store.ID != nil {
+			dataMap["jid"] = mycli.WAClient.Store.ID.String()
+		}
+		dataMap["pushName"] = mycli.WAClient.Store.PushName
 
-				err = mycli.WAClient.SendPresence(context.Background(), types.PresenceAvailable)
-				if err != nil {
-					mycli.loggerWrapper.GetLogger(mycli.userID).LogWarn("[%s] Failed to send available presence %v", mycli.userID, err)
-				} else {
-					mycli.loggerWrapper.GetLogger(mycli.userID).LogWarn("[%s] Marked self as available", mycli.userID)
-				}
+		postMap["data"] = dataMap
+
+		// Respect alwaysOnline setting
+		if mycli.Instance.AlwaysOnline {
+			go schedulePresenceUpdates(mycli)
+
+			err = mycli.WAClient.SendPresence(context.Background(), types.PresenceAvailable)
+			if err != nil {
+				mycli.loggerWrapper.GetLogger(mycli.userID).LogWarn("[%s] Failed to send available presence %v", mycli.userID, err)
 			} else {
-				err = mycli.WAClient.SendPresence(context.Background(), types.PresenceUnavailable)
-				if err != nil {
-					mycli.loggerWrapper.GetLogger(mycli.userID).LogWarn("[%s] Failed to send unavailable presence %v", mycli.userID, err)
-				} else {
-					mycli.loggerWrapper.GetLogger(mycli.userID).LogInfo("[%s] Marked self as unavailable (alwaysOnline=false)", mycli.userID)
-				}
+				mycli.loggerWrapper.GetLogger(mycli.userID).LogWarn("[%s] Marked self as available", mycli.userID)
 			}
-
-			mycli.Instance.Connected = true
-			mycli.Instance.DisconnectReason = ""
-			err = mycli.instanceRepository.UpdateConnected(mycli.Instance.Id, mycli.Instance.Connected, mycli.Instance.DisconnectReason)
+		} else {
+			err = mycli.WAClient.SendPresence(context.Background(), types.PresenceUnavailable)
 			if err != nil {
-				mycli.loggerWrapper.GetLogger(mycli.userID).LogError("[%s] Error updating instance: %s", mycli.Instance.Id, err)
-			}
-
-			err = mycli.instanceRepository.UpdateQrcode(mycli.Instance.Id, "")
-			if err != nil {
-				mycli.loggerWrapper.GetLogger(mycli.userID).LogError("[%s] Error updating instance: %s", mycli.Instance.Id, err)
+				mycli.loggerWrapper.GetLogger(mycli.userID).LogWarn("[%s] Failed to send unavailable presence %v", mycli.userID, err)
+			} else {
+				mycli.loggerWrapper.GetLogger(mycli.userID).LogInfo("[%s] Marked self as unavailable (alwaysOnline=false)", mycli.userID)
 			}
 		}
 	case *events.PairSuccess:

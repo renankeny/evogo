@@ -47,6 +47,11 @@ export function useInstances(pollInterval = 5000) {
     await fetchInstances(true);
   };
 
+  const logoutInstance = async (token: string) => {
+    await instancesService.logout(token);
+    await fetchInstances(true);
+  };
+
   const reconnectInstance = async (token: string) => {
     await instancesService.reconnect(token);
     await fetchInstances(true);
@@ -75,6 +80,7 @@ export function useInstances(pollInterval = 5000) {
     createInstance,
     connectInstance,
     disconnectInstance,
+    logoutInstance,
     reconnectInstance,
     forceReconnectInstance,
     deleteInstance,

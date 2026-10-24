@@ -104,6 +104,10 @@ export const instancesService = {
   },
 
   async disconnect(token: string): Promise<void> {
+    await apiClient.post("/instance/disconnect", {}, { headers: { apikey: token } });
+  },
+
+  async logout(token: string): Promise<void> {
     await apiClient.delete("/instance/logout", { headers: { apikey: token } });
   },
 
