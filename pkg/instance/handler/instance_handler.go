@@ -116,11 +116,16 @@ func (i *instanceHandler) Create(ctx *gin.Context) {
 
 	createdInstance, err := i.instanceService.Create(data)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "success": false})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "success", "data": createdInstance})
+	ctx.JSON(http.StatusOK, gin.H{
+		"success":  true,
+		"message":  "success",
+		"data":     createdInstance,
+		"instance": createdInstance,
+	})
 }
 
 // Connect to instance
@@ -308,11 +313,16 @@ func (i *instanceHandler) Status(ctx *gin.Context) {
 
 	status, err := i.instanceService.Status(instance)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "success": false})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "success", "data": status})
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "success",
+		"data":    status,
+		"status":  status,
+	})
 }
 
 // Get instance QR code
@@ -329,17 +339,22 @@ func (i *instanceHandler) Qr(ctx *gin.Context) {
 
 	instance, ok := getInstance.(*instance_model.Instance)
 	if !ok {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "instance not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "instance not found", "success": false})
 		return
 	}
 
 	qrcode, err := i.instanceService.GetQr(instance)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "success": false})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "success", "data": qrcode})
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "success",
+		"data":    qrcode,
+		"qrcode":  qrcode,
+	})
 }
 
 // Request pairing code
@@ -395,11 +410,16 @@ func (i *instanceHandler) Pair(ctx *gin.Context) {
 func (i *instanceHandler) All(ctx *gin.Context) {
 	instances, err := i.instanceService.GetAll()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "success": false})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "success", "data": instances})
+	ctx.JSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   "success",
+		"data":      instances,
+		"instances": instances,
+	})
 }
 
 // Get instance
@@ -417,17 +437,22 @@ func (i *instanceHandler) Info(ctx *gin.Context) {
 	instanceId := ctx.Param("instanceId")
 
 	if instanceId == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "instanceId is required"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "instanceId is required", "success": false})
 		return
 	}
 
 	instance, err := i.instanceService.Info(instanceId)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "success": false})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "success", "data": instance})
+	ctx.JSON(http.StatusOK, gin.H{
+		"success":  true,
+		"message":  "success",
+		"data":     instance,
+		"instance": instance,
+	})
 }
 
 // GetSelfInfo returns info for authenticated instance
