@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Smartphone, Activity, AlertTriangle, Percent } from "lucide-react";
+import { Smartphone, Activity, AlertTriangle, Percent, Plus, Send } from "lucide-react";
 import { useInstances } from "@/hooks/useInstances";
 import { useAuth } from "@/hooks/useAuth";
+import { PageContainer, PageHeader } from "@/components/layout/PageContainer";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { SystemStatusCard } from "@/components/dashboard/SystemStatusCard";
 import { QuickActionsCard } from "@/components/dashboard/QuickActionsCard";
@@ -9,6 +10,7 @@ import { InstanceOverviewTable } from "@/components/dashboard/InstanceOverviewTa
 import { CreateInstanceModal } from "@/components/instances/CreateInstanceModal";
 import { QuickSendModal } from "@/components/dashboard/QuickSendModal";
 import { InstanceLogsModal } from "@/components/dashboard/InstanceLogsModal";
+import { Button } from "@/components/ui/Button";
 import { instancesService } from "@/services/instancesService";
 import type { CreateInstancePayload, InstanceDTO } from "@/types/InstanceDTO";
 
@@ -16,7 +18,7 @@ export default function DashboardPage() {
   const { instances, loading, fetchInstances, createInstance } = useInstances(10000);
   const { apiKey, apiUrl } = useAuth();
 
-  // Modals state
+  // Modais
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isQuickSendOpen, setIsQuickSendOpen] = useState(false);
   const [quickSendPreselectedId, setQuickSendPreselectedId] = useState<string | undefined>(undefined);
@@ -49,14 +51,28 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Visão geral e métricas operacionais do seu servidor Evolution GO.
-        </p>
-      </div>
+    <PageContainer>
+      {/* Standard Page Header */}
+      <PageHeader
+        title="Dashboard"
+        description="Visão geral e métricas operacionais do seu servidor Evolution GO."
+      >
+        <Button
+          variant="outline"
+          onClick={() => handleOpenQuickSend()}
+          className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer"
+        >
+          <Send className="h-4 w-4" />
+          Disparo de Teste
+        </Button>
+        <Button
+          onClick={() => setIsCreateOpen(true)}
+          className="gap-2 cursor-pointer"
+        >
+          <Plus className="h-4 w-4" />
+          Nova Instância
+        </Button>
+      </PageHeader>
 
       {/* KPI Metric Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -147,6 +163,6 @@ export default function DashboardPage() {
         }}
         instance={selectedLogsInstance}
       />
-    </div>
+    </PageContainer>
   );
 }

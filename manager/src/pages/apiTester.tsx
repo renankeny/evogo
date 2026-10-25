@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Play, Send, CheckCircle2, AlertCircle, Copy, Check } from "lucide-react";
+import { Play, Send, CheckCircle2, AlertCircle, Copy, Check, Terminal, Clock, RefreshCw } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { PageContainer, PageHeader } from "@/components/layout/PageContainer";
 import { apiClient } from "@/services/apiClient";
 import { useInstances } from "@/hooks/useInstances";
 
@@ -15,6 +16,7 @@ export default function ApiTesterPage() {
   const [requestBody, setRequestBody] = useState("");
   const [responseStatus, setResponseStatus] = useState<number | null>(null);
   const [responseData, setResponseData] = useState<string | null>(null);
+  const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -62,6 +64,9 @@ export default function ApiTesterPage() {
     setLoading(true);
     setResponseStatus(null);
     setResponseData(null);
+    setLatencyMs(null);
+    const start = performance.now();
+
     try {
       const headers: Record<string, string> = {};
       if (selectedToken) {
@@ -75,15 +80,27 @@ export default function ApiTesterPage() {
         const payload = requestBody ? JSON.parse(requestBody) : {};
         res = await apiClient.post(endpoint, payload, { headers });
       }
+      setLatencyMs(Math.round(performance.now() - start));
       setResponseStatus(res.status);
       setResponseData(JSON.stringify(res.data, null, 2));
     } catch (err: any) {
+      setLatencyMs(Math.round(performance.now() - start));
       setResponseStatus(err?.response?.status || 500);
       setResponseData(
         JSON.stringify(err?.response?.data || { error: err?.message }, null, 2)
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFormatJson = () => {
+    if (!requestBody.trim()) return;
+    try {
+      const parsed = JSON.parse(requestBody);
+      setRequestBody(JSON.stringify(parsed, null, 2));
+    } catch {
+      // ignore parse errors
     }
   };
 
@@ -95,138 +112,194 @@ export default function ApiTesterPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">API Tester</h1>
-        <p className="text-sm text-muted-foreground">
-          Teste interativamente as rotas do seu Evolution GO diretamente pelo painel.
-        </p>
-      </div>
+    <PageContainer>
+      {/* Standard Page Header */}
+      <PageHeader
+        title="API Tester"
+        description="Teste interativamente qualquer rota do Evolution GO diretamente pela interface."
+        badge={
+          <Badge variant="outline" className="font-mono text-xs gap-1 border-primary/30 text-primary">
+            <Terminal className="h-3 w-3" />
+            v0.7.2
+          </Badge>
+        }
+      />
 
-      {/* Presets */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground mr-1">Atalhos rápidos:</span>
+      {/* Presets Toolbar */}
+      <div className="flex flex-wrap items-center gap-1.5 p-3 rounded-lg border border-border/60 bg-muted/30">
+        <span className="text-xs font-semibold text-muted-foreground mr-1">Atalhos Rápidos:</span>
         {presets.map((p, idx) => (
-          <Button
+          <button
             key={idx}
-            variant="outline"
-            size="sm"
-            className="text-xs h-7"
+            type="button"
+            className="text-xs px-2.5 py-1 rounded-md border border-border bg-card hover:bg-primary/10 hover:text-primary hover:border-primary/40 transition-colors text-foreground font-medium cursor-pointer"
             onClick={() => handleApplyPreset(p)}
           >
             {p.label}
-          </Button>
+          </button>
         ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Painel de Requisição */}
-        <Card className="border-border bg-card shadow-xs">
-          <CardHeader className="pb-3">
+        <Card className="border-border bg-card shadow-xs flex flex-col">
+          <CardHeader className="pb-3 border-b border-border/40">
             <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
               <Play className="h-4 w-4 text-primary" />
-              Requisição
+              Parâmetros da Requisição
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 pt-0">
-            <div className="flex gap-2">
-              <select
-                value={method}
-                onChange={(e) => setMethod(e.target.value as "GET" | "POST")}
-                className="rounded-md border border-input bg-transparent px-3 py-1 text-sm font-semibold text-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="GET">GET</option>
-                <option value="POST">POST</option>
-              </select>
-              <Input
-                value={endpoint}
-                onChange={(e) => setEndpoint(e.target.value)}
-                placeholder="/server/ok"
-                className="font-mono text-xs"
-              />
+
+          <CardContent className="space-y-4 pt-4 flex-1">
+            {/* Método e Endpoint */}
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">
+                Método & Rota
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={method}
+                  onChange={(e) => setMethod(e.target.value as "GET" | "POST")}
+                  className={`rounded-md border px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer ${
+                    method === "GET"
+                      ? "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                      : "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  }`}
+                >
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                </select>
+                <Input
+                  value={endpoint}
+                  onChange={(e) => setEndpoint(e.target.value)}
+                  placeholder="/server/ok"
+                  className="font-mono text-xs flex-1"
+                />
+              </div>
             </div>
 
+            {/* Token da Instância */}
             {instances.length > 0 && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Usar Token da Instância (Opcional):
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">
+                  Autenticação (Header apikey)
                 </label>
                 <select
                   value={selectedToken}
                   onChange={(e) => setSelectedToken(e.target.value)}
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-xs text-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer font-mono"
                 >
-                  <option value="">Nenhum (usar Global API Key padrão)</option>
+                  <option value="">Chave Global Padrão (Admin)</option>
                   {instances.map((i) => (
                     <option key={i.id} value={i.apikey}>
-                      {i.name} ({i.apikey.slice(0, 8)}...)
+                      Instância: {i.name} ({i.apikey.slice(0, 10)}...)
                     </option>
                   ))}
                 </select>
               </div>
             )}
 
+            {/* Body para POST */}
             {method === "POST" && (
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Corpo JSON:</label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase">
+                    Corpo da Requisição (JSON)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleFormatJson}
+                    className="text-[11px] text-primary hover:underline cursor-pointer"
+                  >
+                    Formatar JSON
+                  </button>
+                </div>
                 <textarea
                   value={requestBody}
                   onChange={(e) => setRequestBody(e.target.value)}
-                  rows={8}
+                  rows={9}
                   placeholder={'{\n  "key": "value"\n}'}
-                  className="w-full rounded-md border border-input bg-muted/20 p-3 font-mono text-xs text-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                  className="w-full rounded-md border border-input bg-muted/20 p-3 font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-y"
                 />
               </div>
             )}
 
-            <Button onClick={handleExecute} disabled={loading} className="w-full gap-2">
-              <Send className="h-4 w-4" />
-              {loading ? "Executando..." : "Executar Requisição"}
+            <Button
+              onClick={handleExecute}
+              disabled={loading}
+              className="w-full gap-2 cursor-pointer mt-auto"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Executando Requisição...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Executar Chamada
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>
 
         {/* Painel de Resposta */}
-        <Card className="border-border bg-card shadow-xs">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <Card className="border-border bg-card shadow-xs flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border/40">
             <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-              Resposta
+              Retorno da API
               {responseStatus !== null && (
-                <Badge variant={responseStatus >= 200 && responseStatus < 300 ? "success" : "destructive"}>
+                <Badge
+                  variant={responseStatus >= 200 && responseStatus < 300 ? "success" : "destructive"}
+                  className="gap-1 font-mono text-xs"
+                >
                   {responseStatus >= 200 && responseStatus < 300 ? (
-                    <CheckCircle2 className="h-3 w-3 mr-1 inline" />
+                    <CheckCircle2 className="h-3 w-3 inline" />
                   ) : (
-                    <AlertCircle className="h-3 w-3 mr-1 inline" />
+                    <AlertCircle className="h-3 w-3 inline" />
                   )}
-                  HTTP {responseStatus}
+                  {responseStatus}
                 </Badge>
               )}
+              {latencyMs !== null && (
+                <span className="text-xs font-mono text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {latencyMs}ms
+                </span>
+              )}
             </CardTitle>
+
             {responseData && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs gap-1"
+                className="h-7 text-xs gap-1.5 cursor-pointer"
                 onClick={handleCopyResponse}
               >
                 {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                Copiar
+                {copied ? "Copiado!" : "Copiar"}
               </Button>
             )}
           </CardHeader>
-          <CardContent className="pt-0">
+
+          <CardContent className="pt-4 flex-1 flex flex-col">
             {responseData ? (
-              <pre className="max-h-[400px] overflow-auto rounded-md border border-border/80 bg-muted/40 p-4 font-mono text-xs text-foreground">
+              <pre className="flex-1 max-h-[480px] overflow-auto rounded-md border border-border bg-zinc-950 p-4 font-mono text-xs text-zinc-200 scrollbar-thin">
                 {responseData}
               </pre>
             ) : (
-              <div className="flex h-64 flex-col items-center justify-center rounded-md border border-dashed border-border text-center text-xs text-muted-foreground p-6">
-                Clique em "Executar Requisição" para visualizar o retorno da API em tempo real.
+              <div className="flex-1 flex flex-col items-center justify-center rounded-md border border-dashed border-border text-center text-xs text-muted-foreground p-8 min-h-[280px]">
+                <Terminal className="h-8 w-8 opacity-40 mb-2 text-muted-foreground" />
+                <p className="font-medium text-foreground">Aguardando execução</p>
+                <p className="text-[11px] mt-1 text-muted-foreground">
+                  Selecione um endpoint ou atalho e clique em &quot;Executar Chamada&quot;.
+                </p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   );
 }
