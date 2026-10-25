@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Plus, BookOpen, PlaySquare, Key, ExternalLink } from "lucide-react";
+import { Plus, BookOpen, PlaySquare, Key, ExternalLink, Send } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { maskApiKey } from "@/utils/maskApiKey";
@@ -10,9 +10,16 @@ export interface QuickActionsCardProps {
   apiKey: string;
   apiUrl: string;
   onOpenCreateModal: () => void;
+  onOpenQuickSend?: () => void;
 }
 
-export function QuickActionsCard({ id, apiKey, apiUrl, onOpenCreateModal }: QuickActionsCardProps) {
+export function QuickActionsCard({
+  id,
+  apiKey,
+  apiUrl,
+  onOpenCreateModal,
+  onOpenQuickSend,
+}: QuickActionsCardProps) {
   const swaggerUrl = `${apiUrl.replace(/\/$/, "")}/swagger/index.html`;
 
   return (
@@ -26,6 +33,17 @@ export function QuickActionsCard({ id, apiKey, apiUrl, onOpenCreateModal }: Quic
             <Plus className="h-4 w-4" />
             Nova Instância
           </Button>
+
+          {onOpenQuickSend && (
+            <Button
+              variant="outline"
+              onClick={onOpenQuickSend}
+              className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+            >
+              <Send className="h-4 w-4" />
+              Disparo de Teste
+            </Button>
+          )}
 
           <Link to="/manager/api-tester">
             <Button variant="outline" className="gap-2">

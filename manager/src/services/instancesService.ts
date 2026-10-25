@@ -177,4 +177,28 @@ export const instancesService = {
     );
     return res.data;
   },
+
+  async sendText(token: string, number: string, text: string): Promise<any> {
+    // Clean up number
+    const cleanNumber = number.replace(/\D/g, "");
+    const res = await apiClient.post(
+      "/send/text",
+      { number: cleanNumber, text },
+      { headers: { apikey: token } }
+    );
+    return res.data;
+  },
+
+  async getLogs(instanceId: string, limit = 100, level = ""): Promise<any[]> {
+    const res = await apiClient.get(`/instance/logs/${instanceId}`, {
+      params: { limit, level },
+    });
+    return Array.isArray(res.data) ? res.data : res.data?.data || [];
+  },
+
+  async reconnectAll(tokens: string[]): Promise<void> {
+    await Promise.allSettled(
+      tokens.map((token) => instancesService.connect(token))
+    );
+  },
 };

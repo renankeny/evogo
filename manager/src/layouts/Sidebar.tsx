@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Smartphone } from "lucide-react";
+import { LayoutDashboard, Smartphone, Terminal, BookOpen, ExternalLink } from "lucide-react";
 import { APP_VERSION } from "@/config/version";
 
 export function Sidebar() {
@@ -9,6 +9,7 @@ export function Sidebar() {
   const navItems = [
     { to: "/manager", label: "Dashboard", icon: LayoutDashboard },
     { to: "/manager/instances", label: "Instâncias", icon: Smartphone },
+    { to: "/manager/api-tester", label: "API Tester", icon: Terminal },
   ];
 
   return (
@@ -41,6 +42,19 @@ export function Sidebar() {
             )}
           </NavLink>
         ))}
+
+        <a
+          href="/swagger/index.html"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="flex items-center justify-between px-3 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all text-sm font-medium"
+        >
+          <div className="flex items-center gap-3">
+            <BookOpen className="flex-shrink-0 h-5 w-5 text-primary" />
+            <span>Documentação</span>
+          </div>
+          <ExternalLink className="h-3.5 w-3.5 opacity-60" />
+        </a>
       </nav>
       <div className="mt-auto p-4 border-t border-sidebar-border">
         <div className="text-sm text-primary font-medium flex items-center justify-between">

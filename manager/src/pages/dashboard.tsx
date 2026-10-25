@@ -7,18 +7,46 @@ import { SystemStatusCard } from "@/components/dashboard/SystemStatusCard";
 import { QuickActionsCard } from "@/components/dashboard/QuickActionsCard";
 import { InstanceOverviewTable } from "@/components/dashboard/InstanceOverviewTable";
 import { CreateInstanceModal } from "@/components/instances/CreateInstanceModal";
-import type { CreateInstancePayload } from "@/types/InstanceDTO";
+import { QuickSendModal } from "@/components/dashboard/QuickSendModal";
+import { InstanceLogsModal } from "@/components/dashboard/InstanceLogsModal";
+import { instancesService } from "@/services/instancesService";
+import type { CreateInstancePayload, InstanceDTO } from "@/types/InstanceDTO";
 
 export default function DashboardPage() {
   const { instances, loading, fetchInstances, createInstance } = useInstances(10000);
   const { apiKey, apiUrl } = useAuth();
+
+  // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isQuickSendOpen, setIsQuickSendOpen] = useState(false);
+  const [quickSendPreselectedId, setQuickSendPreselectedId] = useState<string | undefined>(undefined);
+  const [isLogsOpen, setIsLogsOpen] = useState(false);
+  const [selectedLogsInstance, setSelectedLogsInstance] = useState<InstanceDTO | null>(null);
 
   const totalInstances = instances.length;
   const connectedCount = instances.filter((i) => i.connected || i.status === "open").length;
   const disconnectedCount = totalInstances - connectedCount;
   const connectionRate =
     totalInstances > 0 ? Math.round((connectedCount / totalInstances) * 100) : 0;
+
+  const handleOpenQuickSend = (instance?: InstanceDTO) => {
+    setQuickSendPreselectedId(instance ? instance.id : undefined);
+    setIsQuickSendOpen(true);
+  };
+
+  const handleOpenLogs = (instance: InstanceDTO) => {
+    setSelectedLogsInstance(instance);
+    setIsLogsOpen(true);
+  };
+
+  const handleReconnectAll = async () => {
+    const disconnected = instances.filter((i) => !i.connected && i.status !== "open");
+    const tokens = disconnected.map((i) => i.apikey).filter(Boolean);
+    if (tokens.length > 0) {
+      await instancesService.reconnectAll(tokens);
+      await fetchInstances();
+    }
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -78,6 +106,7 @@ export default function DashboardPage() {
           apiKey={apiKey || ""}
           apiUrl={apiUrl || ""}
           onOpenCreateModal={() => setIsCreateOpen(true)}
+          onOpenQuickSend={() => handleOpenQuickSend()}
         />
       </div>
 
@@ -87,6 +116,9 @@ export default function DashboardPage() {
         instances={instances}
         loading={loading}
         onRefresh={() => fetchInstances()}
+        onQuickSend={(inst) => handleOpenQuickSend(inst)}
+        onViewLogs={(inst) => handleOpenLogs(inst)}
+        onReconnectAll={handleReconnectAll}
       />
 
       {/* Modal Nova Instância */}
@@ -96,6 +128,24 @@ export default function DashboardPage() {
         onSubmit={async (payload: CreateInstancePayload) => {
           await createInstance(payload);
         }}
+      />
+
+      {/* Modal Disparo Rápido de Teste */}
+      <QuickSendModal
+        isOpen={isQuickSendOpen}
+        onClose={() => setIsQuickSendOpen(false)}
+        instances={instances}
+        preselectedInstanceId={quickSendPreselectedId}
+      />
+
+      {/* Modal Logs da Instância */}
+      <InstanceLogsModal
+        isOpen={isLogsOpen}
+        onClose={() => {
+          setIsLogsOpen(false);
+          setSelectedLogsInstance(null);
+        }}
+        instance={selectedLogsInstance}
       />
     </div>
   );
