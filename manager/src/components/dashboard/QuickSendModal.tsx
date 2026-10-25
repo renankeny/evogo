@@ -189,25 +189,25 @@ export function QuickSendModal({
           <div
             className={`rounded-lg p-3 text-xs border ${
               result.success
-                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
+                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
                 : "bg-destructive/10 border-destructive/30 text-destructive"
             }`}
           >
             <div className="flex items-center gap-2 font-medium">
               {result.success ? (
                 <>
-                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                   <span>Mensagem enviada com sucesso ao WhatsApp!</span>
                 </>
               ) : (
                 <>
-                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
                   <span>Falha ao enviar: {result.error}</span>
                 </>
               )}
             </div>
             {result.success && result.data && (
-              <div className="mt-2 p-2 rounded bg-background/80 font-mono text-[11px] text-foreground border border-border/50 max-h-24 overflow-y-auto">
+              <div className="mt-2 p-2 rounded bg-muted/50 font-mono text-[11px] text-foreground border border-border max-h-24 overflow-y-auto">
                 <pre>{JSON.stringify(result.data, null, 2)}</pre>
               </div>
             )}
@@ -215,14 +215,14 @@ export function QuickSendModal({
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pt-2 border-t border-border">
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="w-full sm:w-auto cursor-pointer">
             Fechar
           </Button>
           <Button
             type="submit"
             disabled={loading || !isInstanceConnected}
-            className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+            className="w-full sm:w-auto gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium cursor-pointer"
           >
             {loading ? (
               <>

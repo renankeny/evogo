@@ -36,15 +36,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-t from-primary/20 via-background/95 to-background relative">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-t from-primary/10 via-background to-background relative text-foreground">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-primary">Evolution GO</h1>
         </div>
 
-        <div className="bg-background/80 backdrop-blur-sm border rounded-lg p-6 shadow-lg">
+        <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
           <div className="space-y-2 mb-6">
-            <h2 className="text-2xl font-bold">Entrar na sua conta</h2>
+            <h2 className="text-2xl font-bold text-foreground">Entrar no Painel</h2>
             <p className="text-muted-foreground text-sm">
               Digite suas credenciais para acessar o sistema
             </p>
@@ -58,13 +58,13 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="login-apiUrl">
+              <label className="text-sm font-medium text-foreground" htmlFor="login-apiUrl">
                 URL da API Evolution GO
               </label>
               <input
                 id="login-apiUrl"
                 type="text"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
                 placeholder="http://localhost:8080"
                 disabled={loading}
                 value={apiUrl}
@@ -73,7 +73,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="login-apiKey">
+              <label className="text-sm font-medium text-foreground" htmlFor="login-apiKey">
                 API Key (GLOBAL_API_KEY)
               </label>
               <input

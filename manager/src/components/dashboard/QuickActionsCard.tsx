@@ -28,8 +28,8 @@ export function QuickActionsCard({
         <CardTitle className="text-base font-semibold text-foreground">Ações Rápidas & Conexão</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={onOpenCreateModal} className="gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+          <Button onClick={onOpenCreateModal} className="gap-1.5 sm:gap-2 text-xs sm:text-sm h-9 cursor-pointer w-full sm:w-auto">
             <Plus className="h-4 w-4" />
             Nova Instância
           </Button>
@@ -38,35 +38,35 @@ export function QuickActionsCard({
             <Button
               variant="outline"
               onClick={onOpenQuickSend}
-              className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+              className="gap-1.5 sm:gap-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 text-xs sm:text-sm h-9 cursor-pointer w-full sm:w-auto"
             >
               <Send className="h-4 w-4" />
               Disparo de Teste
             </Button>
           )}
 
-          <Link to="/manager/api-tester">
-            <Button variant="outline" className="gap-2">
-              <PlaySquare className="h-4 w-4 text-purple-400" />
+          <Link to="/manager/api-tester" className="w-full sm:w-auto">
+            <Button variant="outline" className="gap-1.5 sm:gap-2 text-xs sm:text-sm h-9 cursor-pointer w-full">
+              <PlaySquare className="h-4 w-4 text-purple-500 dark:text-purple-400" />
               API Tester
             </Button>
           </Link>
 
-          <a href={swaggerUrl} target="_blank" rel="noreferrer noopener">
-            <Button variant="outline" className="gap-2">
+          <a href={swaggerUrl} target="_blank" rel="noreferrer noopener" className="w-full sm:w-auto">
+            <Button variant="outline" className="gap-1.5 sm:gap-2 text-xs sm:text-sm h-9 cursor-pointer w-full">
               <BookOpen className="h-4 w-4 text-primary" />
               Swagger Docs
-              <ExternalLink className="h-3 w-3 opacity-60" />
+              <ExternalLink className="h-3 w-3 opacity-60 ml-0.5" />
             </Button>
           </a>
         </div>
 
-        <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-xs space-y-2">
-          <div className="flex items-center justify-between">
+        <div className="rounded-lg border border-border/80 bg-muted/30 p-3 text-xs space-y-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <span className="text-muted-foreground">URL da API:</span>
-            <span className="font-mono font-medium text-foreground">{apiUrl || "-"}</span>
+            <span className="font-mono font-medium text-foreground break-all">{apiUrl || "-"}</span>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <span className="text-muted-foreground flex items-center gap-1">
               <Key className="h-3 w-3" />
               Chave Global:

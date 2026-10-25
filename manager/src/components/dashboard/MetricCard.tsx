@@ -22,24 +22,24 @@ export function MetricCard({
   pulse = false,
 }: MetricCardProps) {
   return (
-    <Card id={id} className="relative overflow-hidden border-border bg-card shadow-xs transition-all hover:shadow-md">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <div className="relative">
-            <Icon className={cn("h-5 w-5", iconColor)} />
+    <Card id={id} className="relative overflow-hidden border-border bg-card shadow-xs transition-all hover:shadow-sm hover:border-primary/40">
+      <CardContent className="p-4 sm:p-5 md:p-6">
+        <div className="flex items-center justify-between gap-1">
+          <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
+          <div className="relative shrink-0">
+            <Icon className={cn("h-4 w-4 sm:h-5 sm:w-5", iconColor)} />
             {pulse && (
-              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+              <span className="absolute -top-1 -right-1 flex h-2 w-2 sm:h-2.5 sm:w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                <span className="relative inline-flex rounded-full h-full w-full bg-emerald-500"></span>
               </span>
             )}
           </div>
         </div>
-        <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-3xl font-bold tracking-tight text-foreground">{value}</span>
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground">{value}</span>
         </div>
-        {subtitle && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}
+        {subtitle && <p className="mt-1 text-[11px] sm:text-xs text-muted-foreground truncate">{subtitle}</p>}
       </CardContent>
     </Card>
   );

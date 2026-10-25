@@ -85,7 +85,7 @@ export function InstanceCard({
           </div>
         </div>
 
-        <div className="flex border-t border-sidebar-border opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="flex border-t border-sidebar-border opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
           {!isConnected ? (
             <button
               className="flex-1 rounded-none h-12 text-green-500 hover:text-green-400 hover:bg-green-500/10 flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"

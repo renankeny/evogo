@@ -60,22 +60,22 @@ export default function DashboardPage() {
         <Button
           variant="outline"
           onClick={() => handleOpenQuickSend()}
-          className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer"
+          className="gap-1.5 sm:gap-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer text-xs sm:text-sm h-8 sm:h-9"
         >
-          <Send className="h-4 w-4" />
-          Disparo de Teste
+          <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <span>Disparo de Teste</span>
         </Button>
         <Button
           onClick={() => setIsCreateOpen(true)}
-          className="gap-2 cursor-pointer"
+          className="gap-1.5 sm:gap-2 cursor-pointer text-xs sm:text-sm h-8 sm:h-9"
         >
-          <Plus className="h-4 w-4" />
-          Nova Instância
+          <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <span>Nova Instância</span>
         </Button>
       </PageHeader>
 
-      {/* KPI Metric Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* KPI Metric Cards: 2 cols on mobile, 4 cols on desktop */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <MetricCard
           id="kpi-total-instances"
           title="Total de Instâncias"
@@ -99,7 +99,7 @@ export default function DashboardPage() {
           id="kpi-disconnected-instances"
           title="Desconectadas"
           value={disconnectedCount}
-          subtitle="Requerem conexão ou QR Code"
+          subtitle="Requerem conexão"
           icon={AlertTriangle}
           iconColor={disconnectedCount > 0 ? "text-amber-500" : "text-muted-foreground"}
         />
@@ -108,14 +108,14 @@ export default function DashboardPage() {
           id="kpi-connection-rate"
           title="Taxa de Conectividade"
           value={`${connectionRate}%`}
-          subtitle="Disponibilidade global da frota"
+          subtitle="Disponibilidade global"
           icon={Percent}
           iconColor="text-purple-500"
         />
       </div>
 
       {/* Grid: Server Status & Quick Actions */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
         <SystemStatusCard id="card-server-status" isOnline={true} />
         <QuickActionsCard
           id="card-quick-actions"
