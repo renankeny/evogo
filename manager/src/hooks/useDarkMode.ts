@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 
 export function useDarkMode() {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window === "undefined") return "light";
+    if (typeof window === "undefined") return "dark";
     const saved = localStorage.getItem("evolution-theme");
     if (saved === "light" || saved === "dark") return saved;
-    return "light";
+    return "dark";
   });
 
   useEffect(() => {

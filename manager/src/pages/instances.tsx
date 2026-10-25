@@ -155,7 +155,7 @@ export default function InstancesPage() {
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3 flex-1">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sidebar-foreground/60 dark:text-gray-200" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sidebar-foreground/60 dark:text-gray-200 pointer-events-none" />
               <input
                 type="search"
                 placeholder="Buscar instâncias..."
@@ -193,7 +193,6 @@ export default function InstancesPage() {
                 onDisconnect={(inst) => setInstanceToDisconnect(inst)}
                 onDelete={(inst) => setInstanceToDelete(inst)}
                 onSettings={(inst) => navigate(`/manager/instances/${inst.id}/settings`)}
-                onLogs={(inst) => openLogs(inst)}
                 loadingAction={loading}
               />
             ))}

@@ -12,10 +12,22 @@ export const serverService = {
     return res.data;
   },
 
-  async ping(): Promise<{ latencyMs: number; status: string; version: string; isOnline: boolean }> {
+  async ping(): Promise<{
+    latencyMs: number;
+    status: string;
+    version: string;
+    isOnline: boolean;
+    dbActive: boolean;
+    uptimeSeconds: number;
+  }> {
     const start = performance.now();
     try {
-      const res = await apiClient.get<{ status?: string; version?: string }>("/health", {
+      const res = await apiClient.get<{
+        status?: string;
+        version?: string;
+        database?: string;
+        uptime?: number;
+      }>("/health", {
         params: { t: Date.now() },
       });
       const latencyMs = Math.round(performance.now() - start);
@@ -24,14 +36,30 @@ export const serverService = {
         status: res.data?.status || "online",
         version: res.data?.version || "0.7.2",
         isOnline: true,
+        dbActive: res.data?.database !== "inactive" && res.data?.database !== "down",
+        uptimeSeconds: typeof res.data?.uptime === "number" ? res.data.uptime : 0,
       };
     } catch {
       const latencyMs = Math.round(performance.now() - start);
       try {
         await apiClient.get("/server/ok", { params: { t: Date.now() } });
-        return { latencyMs, status: "online", version: "0.7.2", isOnline: true };
+        return {
+          latencyMs,
+          status: "online",
+          version: "0.7.2",
+          isOnline: true,
+          dbActive: true,
+          uptimeSeconds: 0,
+        };
       } catch {
-        return { latencyMs: 0, status: "offline", version: "0.7.2", isOnline: false };
+        return {
+          latencyMs: 0,
+          status: "offline",
+          version: "0.7.2",
+          isOnline: false,
+          dbActive: false,
+          uptimeSeconds: 0,
+        };
       }
     }
   },

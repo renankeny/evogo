@@ -26,10 +26,10 @@ export function MetricCard({
       <CardContent className="p-4 sm:p-5 md:p-6">
         <div className="flex items-center justify-between gap-1">
           <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
-          <div className="relative shrink-0">
-            <Icon className={cn("h-4 w-4 sm:h-5 sm:w-5", iconColor)} />
+          <div className="relative shrink-0 p-2 rounded-lg bg-muted/60 border border-border/50 flex items-center justify-center">
+            <Icon className={cn("h-4 w-4", iconColor)} />
             {pulse && (
-              <span className="absolute -top-1 -right-1 flex h-2 w-2 sm:h-2.5 sm:w-2.5">
+              <span className="absolute -top-1 -right-1 flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-full w-full bg-emerald-500"></span>
               </span>

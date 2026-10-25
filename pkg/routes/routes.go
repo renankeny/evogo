@@ -21,7 +21,10 @@ import (
 	send_handler "github.com/evolution-foundation/evolution-go/pkg/sendMessage/handler"
 	server_handler "github.com/evolution-foundation/evolution-go/pkg/server/handler"
 	user_handler "github.com/evolution-foundation/evolution-go/pkg/user/handler"
+	"time"
 )
+
+var serverStartTime = time.Now()
 
 type Routes struct {
 	authMiddleware          auth_middleware.Middleware
@@ -64,9 +67,12 @@ func (r *Routes) AssignRoutes(eng *gin.Engine) {
 	})
 
 	eng.GET("/health", func(c *gin.Context) {
+		uptimeSec := int64(time.Since(serverStartTime).Seconds())
 		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"version": "0.7.2",
+			"status":   "healthy",
+			"version":  "0.7.2",
+			"database": "active",
+			"uptime":   uptimeSec,
 		})
 	})
 

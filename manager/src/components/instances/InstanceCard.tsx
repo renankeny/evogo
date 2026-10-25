@@ -1,5 +1,5 @@
 import React from "react";
-import { QrCode, Power, Trash2, Smartphone, Settings, Terminal } from "lucide-react";
+import { QrCode, Power, Trash2, Smartphone, Settings } from "lucide-react";
 import { maskApiKey } from "@/utils/maskApiKey";
 import type { InstanceDTO } from "@/types/InstanceDTO";
 
@@ -8,7 +8,6 @@ export interface InstanceCardProps {
   onConnect: (instance: InstanceDTO) => void;
   onDisconnect: (instance: InstanceDTO) => void;
   onSettings?: (instance: InstanceDTO) => void;
-  onLogs?: (instance: InstanceDTO) => void;
   onForceReconnect?: (instance: InstanceDTO) => void;
   onDelete: (instance: InstanceDTO) => void;
   loadingAction?: boolean;
@@ -19,7 +18,6 @@ export function InstanceCard({
   onConnect,
   onDisconnect,
   onSettings,
-  onLogs,
   onDelete,
 }: InstanceCardProps) {
   const isConnected = Boolean(instance.connected || instance.status === "open");
@@ -59,12 +57,24 @@ export function InstanceCard({
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                 isConnected
-                  ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                  ? "badge-status-connected"
                   : isConnecting
-                  ? "bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse"
-                  : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                  ? "badge-status-connecting animate-pulse"
+                  : "badge-status-disconnected"
               }`}
             >
+              <span
+                className={`h-1.5 w-1.5 rounded-full mr-1.5 inline-block shrink-0 ${
+                  isConnected
+                    ? "bg-green-500"
+                    : isConnecting
+                    ? "bg-yellow-500 animate-pulse"
+                    : "bg-red-500"
+                }`}
+                style={{
+                  backgroundColor: isConnected ? "#22c55e" : isConnecting ? "#eab308" : "#ef4444",
+                }}
+              />
               {isConnected ? "Conectado" : isConnecting ? "Conectando..." : "Desconectado"}
             </span>
           </div>
@@ -87,11 +97,12 @@ export function InstanceCard({
           </div>
         </div>
 
-        <div className="flex border-t border-sidebar-border bg-sidebar/50">
+        {/* Action Buttons - Always visible, clean spacing and borders */}
+        <div className="flex border-t border-sidebar-border bg-sidebar">
           {!isConnected ? (
             <button
               type="button"
-              className="flex-1 rounded-none h-12 text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
+              className="flex-1 rounded-none h-12 text-green-500 hover:text-green-400 hover:bg-green-500/10 flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
               onClick={() => onConnect(instance)}
             >
               <QrCode className="h-4 w-4 mr-2" />
@@ -100,7 +111,7 @@ export function InstanceCard({
           ) : (
             <button
               type="button"
-              className="flex-1 rounded-none h-12 text-amber-600 dark:text-amber-400 hover:text-amber-500 hover:bg-amber-500/10 flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
+              className="flex-1 rounded-none h-12 text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
               onClick={() => onDisconnect(instance)}
             >
               <Power className="h-4 w-4 mr-2" />
@@ -110,25 +121,11 @@ export function InstanceCard({
 
           <div className="w-px bg-sidebar-border" />
 
-          {onLogs && (
-            <>
-              <button
-                type="button"
-                className="rounded-none h-12 px-3 text-sidebar-foreground hover:text-emerald-500 hover:bg-sidebar-accent flex items-center justify-center transition-colors cursor-pointer"
-                onClick={() => onLogs(instance)}
-                title="Logs em tempo real"
-              >
-                <Terminal className="h-4 w-4" />
-              </button>
-              <div className="w-px bg-sidebar-border" />
-            </>
-          )}
-
           {onSettings && (
             <>
               <button
                 type="button"
-                className="rounded-none h-12 px-3.5 text-sidebar-foreground hover:bg-sidebar-accent flex items-center justify-center transition-colors cursor-pointer"
+                className="rounded-none h-12 px-4 text-sidebar-foreground hover:bg-sidebar-accent flex items-center justify-center transition-colors cursor-pointer"
                 onClick={() => onSettings(instance)}
                 title="Configurações da instância"
               >
@@ -140,7 +137,7 @@ export function InstanceCard({
 
           <button
             type="button"
-            className="rounded-none h-12 px-3.5 text-red-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors cursor-pointer"
+            className="rounded-none h-12 px-4 text-red-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors cursor-pointer"
             onClick={() => onDelete(instance)}
             title="Excluir instância"
           >

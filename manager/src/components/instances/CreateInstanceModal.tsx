@@ -124,7 +124,7 @@ export function CreateInstanceModal({ isOpen, onClose, onSubmit }: CreateInstanc
           <Input
             id="instanceName"
             type="text"
-            placeholder="ex: renan-keny-123"
+            placeholder="ex: atendimento-01"
             value={instanceName}
             onChange={(e) => {
               const formatted = formatInstanceName(e.target.value);

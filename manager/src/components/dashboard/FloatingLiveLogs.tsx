@@ -3,7 +3,6 @@ import {
   Terminal,
   X,
   Minus,
-  Maximize2,
   Play,
   Pause,
   RefreshCw,
@@ -38,12 +37,23 @@ export function FloatingLiveLogs() {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch logs function
+  // Fetch logs function with fallback between ID and Name
   const fetchLogs = async (silent = false) => {
     if (!activeInstance) return;
     if (!silent) setLoading(true);
     try {
-      const data = await instancesService.getLogs(activeInstance.id, 100);
+      // First try by ID (UUID), if empty try by name
+      let data = await instancesService.getLogs(activeInstance.id, 100);
+      if (
+        (!data || data.length === 0) &&
+        activeInstance.name &&
+        activeInstance.name !== activeInstance.id
+      ) {
+        const fallbackData = await instancesService.getLogs(activeInstance.name, 100);
+        if (fallbackData && fallbackData.length > 0) {
+          data = fallbackData;
+        }
+      }
       setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Erro ao sincronizar logs em tempo real:", err);
@@ -65,7 +75,7 @@ export function FloatingLiveLogs() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isOpen, activeInstance?.id, isStreaming]);
+  }, [isOpen, activeInstance?.id, activeInstance?.name, isStreaming]);
 
   // Auto-scroll when new logs arrive if enabled
   useEffect(() => {
@@ -94,7 +104,7 @@ export function FloatingLiveLogs() {
       if (!matchesSearch) return false;
 
       if (levelFilter === "ALL") return true;
-      const level = (item?.level || item?.Level || "").toUpperCase();
+      const level = String(item?.level || item?.Level || "").toUpperCase();
       return level.includes(levelFilter);
     });
   }, [logs, searchTerm, levelFilter]);
@@ -117,10 +127,17 @@ export function FloatingLiveLogs() {
   // Render Minimized Floating Pill
   if (isMinimized) {
     return (
-      <div className="fixed bottom-4 right-4 z-50">
+      <div
+        style={{
+          position: "fixed",
+          bottom: "1rem",
+          right: "1rem",
+          zIndex: 99999,
+        }}
+      >
         <div
           onClick={toggleMinimize}
-          className="flex items-center gap-2.5 bg-zinc-950/95 text-zinc-100 px-3.5 py-2 rounded-full shadow-2xl border border-zinc-700/80 backdrop-blur-md cursor-pointer hover:border-emerald-500/60 transition-all duration-200 select-none group"
+          className="flex items-center gap-2.5 bg-zinc-950 text-zinc-100 px-4 py-2.5 rounded-full shadow-2xl border border-zinc-700/80 cursor-pointer hover:border-emerald-500 transition-all select-none group"
           title="Clique para expandir o console de logs"
         >
           <span className="relative flex h-2.5 w-2.5">
@@ -134,17 +151,17 @@ export function FloatingLiveLogs() {
             />
           </span>
 
-          <Terminal className="h-3.5 w-3.5 text-emerald-400" />
+          <Terminal className="h-4 w-4 text-emerald-400" />
 
           <span className="font-semibold text-xs text-white max-w-[130px] truncate">
             {activeInstance.name}
           </span>
 
-          <span className="text-[10px] font-mono bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full border border-zinc-700/50">
+          <span className="text-[10px] font-mono bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full border border-zinc-700">
             {logs.length} logs
           </span>
 
-          <ChevronUp className="h-3.5 w-3.5 text-zinc-400 group-hover:text-white transition-colors" />
+          <ChevronUp className="h-4 w-4 text-zinc-400 group-hover:text-white transition-colors" />
 
           <button
             type="button"
@@ -152,10 +169,10 @@ export function FloatingLiveLogs() {
               e.stopPropagation();
               closeLogs();
             }}
-            className="p-1 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-rose-400 transition-colors ml-0.5"
+            className="p-1 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-rose-400 transition-colors ml-1"
             title="Fechar logs"
           >
-            <X className="h-3 w-3" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
@@ -166,7 +183,7 @@ export function FloatingLiveLogs() {
   const renderLogEntry = (entry: any, index: number) => {
     if (typeof entry === "string") {
       return (
-        <div key={index} className="leading-snug break-all text-zinc-300">
+        <div key={index} className="leading-snug break-all text-zinc-300 py-0.5">
           {entry}
         </div>
       );
@@ -181,7 +198,7 @@ export function FloatingLiveLogs() {
         })
       : "";
 
-    const level = (entry.level || "INFO").toUpperCase();
+    const level = String(entry.level || "INFO").toUpperCase();
     const isError = level.includes("ERR");
     const isWarn = level.includes("WARN");
     const isDebug = level.includes("DEBUG");
@@ -193,6 +210,11 @@ export function FloatingLiveLogs() {
       : isDebug
       ? "text-sky-400 bg-sky-950/70 border-sky-800/60"
       : "text-emerald-400 bg-emerald-950/70 border-emerald-800/60";
+
+    const hasMetadata =
+      entry.metadata &&
+      typeof entry.metadata === "object" &&
+      Object.keys(entry.metadata).length > 0;
 
     return (
       <div
@@ -206,18 +228,18 @@ export function FloatingLiveLogs() {
         )}
 
         <span
-          className={`text-[9px] font-bold px-1.5 py-0.2 rounded border uppercase tracking-wider shrink-0 select-none ${badgeColor}`}
+          className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider shrink-0 select-none ${badgeColor}`}
         >
           {level}
         </span>
 
         <div className="flex-1 min-w-0">
-          <span className="text-zinc-200 break-words">{entry.message || JSON.stringify(entry)}</span>
-          {entry.metadata && Object.keys(entry.metadata).length > 0 && (
+          <span className="text-zinc-200 break-words">
+            {entry.message || (typeof entry === "object" ? JSON.stringify(entry) : String(entry))}
+          </span>
+          {hasMetadata && (
             <pre className="mt-1 text-[10px] text-zinc-400 bg-black/40 p-1.5 rounded border border-zinc-800/60 overflow-x-auto">
-              {typeof entry.metadata === "string"
-                ? entry.metadata
-                : JSON.stringify(entry.metadata, null, 2)}
+              {JSON.stringify(entry.metadata, null, 2)}
             </pre>
           )}
         </div>
@@ -226,13 +248,27 @@ export function FloatingLiveLogs() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 pointer-events-auto">
-      <div className="w-[calc(100vw-2rem)] sm:w-[540px] max-w-[96vw] h-[390px] max-h-[75vh] flex flex-col bg-zinc-950 text-zinc-100 rounded-xl border border-zinc-800 shadow-2xl overflow-hidden backdrop-blur-lg animate-in slide-in-from-bottom-4 duration-200">
+    <div
+      style={{
+        position: "fixed",
+        bottom: "1rem",
+        right: "1rem",
+        zIndex: 99999,
+      }}
+    >
+      <div
+        style={{
+          width: "min(560px, calc(100vw - 2rem))",
+          height: "420px",
+          maxHeight: "82vh",
+        }}
+        className="flex flex-col bg-zinc-950 text-zinc-100 rounded-xl border border-zinc-800 shadow-2xl overflow-hidden"
+      >
         {/* Header Bar */}
-        <div className="flex items-center justify-between px-3 py-2 bg-zinc-900 border-b border-zinc-800 select-none">
+        <div className="flex items-center justify-between px-3.5 py-2.5 bg-zinc-900 border-b border-zinc-800 select-none shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <Terminal className="h-4 w-4 text-emerald-400 shrink-0" />
-            <span className="font-semibold text-xs text-zinc-100 truncate max-w-[140px] sm:max-w-[200px]">
+            <span className="font-semibold text-xs text-zinc-100 truncate max-w-[150px] sm:max-w-[200px]">
               {activeInstance.name}
             </span>
 
@@ -294,7 +330,7 @@ export function FloatingLiveLogs() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-zinc-900/60 border-b border-zinc-800/80 text-xs">
+        <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-zinc-900/70 border-b border-zinc-800 text-xs shrink-0">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <div className="relative flex-1 max-w-[200px]">
               <Search className="absolute left-2 top-2 h-3 w-3 text-zinc-500" />
@@ -360,7 +396,7 @@ export function FloatingLiveLogs() {
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-2.5 font-mono text-[11px] leading-relaxed space-y-1 scrollbar-thin bg-black/60 select-text"
+          className="flex-1 overflow-y-auto p-2.5 font-mono text-[11px] leading-relaxed space-y-1 scrollbar-thin bg-black/70 select-text"
         >
           {loading && logs.length === 0 ? (
             <div className="flex items-center justify-center h-full text-zinc-500 gap-2">
@@ -373,10 +409,10 @@ export function FloatingLiveLogs() {
               <p className="text-xs">
                 {searchTerm
                   ? "Nenhum log encontrado para o filtro digitado."
-                  : `Aguardando novas operações de "${activeInstance.name}"...`}
+                  : `Aguardando novos eventos da instância "${activeInstance.name}"...`}
               </p>
               <div className="flex items-center gap-1 text-[10px] text-zinc-600">
-                <span>cursor</span>
+                <span>terminal conectado</span>
                 <span className="inline-block w-1.5 h-3 bg-emerald-500 animate-pulse" />
               </div>
             </div>
@@ -388,13 +424,13 @@ export function FloatingLiveLogs() {
           )}
         </div>
 
-        {/* Subtle Bottom Status Bar */}
-        <div className="flex items-center justify-between px-3 py-1 bg-zinc-900 border-t border-zinc-800 text-[10px] text-zinc-500 select-none">
+        {/* Bottom Status Bar */}
+        <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-t border-zinc-800 text-[10px] text-zinc-500 select-none shrink-0">
           <span>
             {filteredLogs.length} de {logs.length} eventos
           </span>
           <span className="hidden sm:inline text-zinc-600">
-            Navegue livremente pelo app enquanto monitora
+            Navegue pelo app enquanto monitora em tempo real
           </span>
         </div>
       </div>

@@ -21,7 +21,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     if (onClose) onClose();
   };
 
-  const navContent = (
+  const renderNavContent = (isMobile = false) => (
     <div className="flex flex-col h-full bg-card text-card-foreground">
       {/* Sidebar Header / Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-border">
@@ -39,11 +39,11 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
             {APP_VERSION}
           </span>
-          {/* Close button for mobile */}
-          {onClose && (
+          {/* Close button ONLY for mobile drawer */}
+          {isMobile && onClose && (
             <button
               onClick={onClose}
-              className="p-1 rounded-md text-muted-foreground hover:text-foreground md:hidden cursor-pointer"
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground cursor-pointer"
               title="Fechar menu"
             >
               <X className="h-5 w-5" />
@@ -112,7 +112,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     <>
       {/* Desktop Sidebar (Fixed) */}
       <aside className="hidden md:flex flex-col w-60 border-r border-border bg-card shrink-0">
-        {navContent}
+        {renderNavContent(false)}
       </aside>
 
       {/* Mobile Drawer Overlay */}
@@ -125,7 +125,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           />
           {/* Drawer Panel */}
           <div className="fixed inset-y-0 left-0 w-64 max-w-[85vw] bg-card border-r border-border shadow-2xl z-50 flex flex-col animate-in slide-in-from-left duration-200">
-            {navContent}
+            {renderNavContent(true)}
           </div>
         </div>
       )}

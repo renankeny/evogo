@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { FlaskConical, BookOpen, Sun, Moon, LogOut, Menu } from "lucide-react";
+import { Terminal, BookOpen, Sun, Moon, LogOut, Menu } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useDarkMode } from "@/hooks/useDarkMode";
 import { APP_VERSION } from "@/config/version";
@@ -23,23 +23,28 @@ export function Header({ onToggleMobileMenu }: HeaderProps) {
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 md:px-6 shadow-xs shrink-0">
-      {/* Left: Mobile Menu Trigger + Brand */}
-      <div className="flex items-center gap-3">
+      {/* Left: Mobile Menu Trigger + Brand (Mobile only) */}
+      <div className="flex items-center gap-3 md:hidden">
         <button
           onClick={onToggleMobileMenu}
-          className="p-2 -ml-2 rounded-md text-foreground hover:bg-muted md:hidden cursor-pointer transition-colors"
+          className="p-2 -ml-2 rounded-md text-foreground hover:bg-muted cursor-pointer transition-colors"
           title="Abrir menu de navegação"
           aria-label="Abrir menu"
         >
           <Menu className="h-5 w-5" />
         </button>
 
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-2">
           <span className="font-bold text-base text-primary">Evolution GO</span>
           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
             {APP_VERSION}
           </span>
         </div>
+      </div>
+
+      {/* Left: Desktop Breadcrumb / Section */}
+      <div className="hidden md:flex items-center gap-2">
+        <span className="text-sm font-semibold text-foreground">Painel Gerenciador</span>
       </div>
 
       {/* Right: Quick Tools, Theme Toggle & Logout */}
@@ -55,7 +60,7 @@ export function Header({ onToggleMobileMenu }: HeaderProps) {
           }
           title="Testar endpoints da API interativamente"
         >
-          <FlaskConical className="h-4 w-4" />
+          <Terminal className="h-4 w-4" />
           <span className="hidden sm:inline">API Tester</span>
         </NavLink>
 

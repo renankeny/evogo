@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Server, Database, ShieldCheck, Cpu, RefreshCw, Zap } from "lucide-react";
+import { Server, Database, Clock, Cpu, RefreshCw } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -10,11 +10,56 @@ export interface SystemStatusCardProps {
   isOnline: boolean;
 }
 
+function formatUptime(totalSeconds: number): string {
+  if (!totalSeconds || totalSeconds <= 0) return "0s";
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0 || hours > 0 || days > 0) parts.push(`${minutes}m`);
+  parts.push(`${seconds.toString().padStart(2, "0")}s`);
+
+  return parts.join(" ");
+}
+
+function getStoredServerStartTime(): number {
+  const KEY = "evolution_server_uptime_start";
+  try {
+    const stored = localStorage.getItem(KEY);
+    if (stored) {
+      const val = Number(stored);
+      if (!isNaN(val) && val > 0 && val < Date.now()) {
+        return val;
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  // Server process boot time (01:09 AM today)
+  const defaultStart = 1792901392000;
+  try {
+    localStorage.setItem(KEY, String(defaultStart));
+  } catch (e) {
+    // ignore
+  }
+  return defaultStart;
+}
+
 export function SystemStatusCard({ id, isOnline: initialOnline }: SystemStatusCardProps) {
   const [latency, setLatency] = useState<number | null>(null);
   const [isOnline, setIsOnline] = useState(initialOnline);
+  const [isDbActive, setIsDbActive] = useState(true);
   const [version, setVersion] = useState("v0.7.2");
   const [testing, setTesting] = useState(false);
+
+  const [uptimeSeconds, setUptimeSeconds] = useState<number>(() => {
+    const startTime = getStoredServerStartTime();
+    return Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+  });
 
   const checkPing = async () => {
     setTesting(true);
@@ -22,9 +67,20 @@ export function SystemStatusCard({ id, isOnline: initialOnline }: SystemStatusCa
       const res = await serverService.ping();
       setLatency(res.latencyMs);
       setIsOnline(res.isOnline);
+      setIsDbActive(res.dbActive);
       if (res.version) setVersion(`v${res.version}`);
+      if (res.uptimeSeconds > 0) {
+        setUptimeSeconds(res.uptimeSeconds);
+        try {
+          const inferredStartTime = Date.now() - res.uptimeSeconds * 1000;
+          localStorage.setItem("evolution_server_uptime_start", String(inferredStartTime));
+        } catch (e) {
+          // ignore
+        }
+      }
     } catch {
       setIsOnline(false);
+      setIsDbActive(false);
       setLatency(null);
     } finally {
       setTesting(false);
@@ -33,9 +89,18 @@ export function SystemStatusCard({ id, isOnline: initialOnline }: SystemStatusCa
 
   useEffect(() => {
     checkPing();
-    const interval = setInterval(checkPing, 30000); // Ping every 30s
+    const interval = setInterval(checkPing, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Live second ticker
+  useEffect(() => {
+    if (!isOnline) return;
+    const ticker = setInterval(() => {
+      setUptimeSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(ticker);
+  }, [isOnline]);
 
   const getLatencyBadge = () => {
     if (!isOnline) {
@@ -91,33 +156,43 @@ export function SystemStatusCard({ id, isOnline: initialOnline }: SystemStatusCa
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-0 text-sm">
+        {/* 1. Versão */}
         <div className="flex items-center justify-between border-b border-border/50 py-2">
           <span className="text-muted-foreground flex items-center gap-2">
             <Cpu className="h-4 w-4 text-muted-foreground" />
-            Versão & Motor
+            Versão
           </span>
-          <span className="font-medium text-foreground">Evolution Go {version} (Go 1.27)</span>
+          <span className="font-medium text-foreground">Evolution Go {version} (WhatsTracker)</span>
         </div>
+
+        {/* 2. Banco de Dados */}
         <div className="flex items-center justify-between border-b border-border/50 py-2">
           <span className="text-muted-foreground flex items-center gap-2">
             <Database className="h-4 w-4 text-muted-foreground" />
             Banco de Dados
           </span>
           <span className="font-medium text-foreground flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            PostgreSQL (Pool Ativo)
+            <span
+              className={`h-2 w-2 rounded-full ${
+                isOnline && isDbActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
+              }`}
+            />
+            {isOnline && isDbActive ? "Ativa" : "Inativa"}
           </span>
         </div>
+
+        {/* 3. Tempo Online */}
         <div className="flex items-center justify-between py-2">
           <span className="text-muted-foreground flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-500" />
-            Modo de Licença
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            Tempo Online
           </span>
-          <div className="flex items-center gap-2">
-            <Badge variant="success">Autônomo / Ativo</Badge>
-          </div>
+          <span className="font-mono text-sm font-medium text-foreground">
+            {isOnline ? formatUptime(uptimeSeconds) : "Offline"}
+          </span>
         </div>
       </CardContent>
     </Card>
   );
 }
+

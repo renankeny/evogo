@@ -109,12 +109,13 @@ export function InstanceOverviewTable({
 
         {/* Search Bar - Full width on mobile */}
         <div className="relative w-full">
-          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
+            type="search"
             placeholder="Buscar por nome da instância ou número WhatsApp..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8 h-8 text-xs w-full bg-background"
+            className="pl-9 h-9 text-xs w-full bg-background border-border"
           />
         </div>
       </CardHeader>
@@ -144,14 +145,32 @@ export function InstanceOverviewTable({
                 <tbody className="divide-y divide-border/40">
                   {filteredInstances.slice(0, 6).map((inst) => {
                     const isConnected = inst.connected || inst.status === "open";
+                    const isConnecting = !isConnected && inst.status === "connecting";
                     return (
                       <tr key={inst.id} className="hover:bg-muted/30 transition-colors">
                         <td className="py-3 px-3">
-                          <span className="font-medium text-foreground">{inst.name}</span>
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-7 w-7 rounded-md bg-muted/60 border border-border/50 flex items-center justify-center shrink-0">
+                              <Smartphone className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <span className="font-medium text-foreground">{inst.name}</span>
+                          </div>
                         </td>
                         <td className="py-3 px-3">
-                          <Badge variant={isConnected ? "success" : "destructive"}>
-                            {isConnected ? "Conectado" : "Desconectado"}
+                          <Badge variant={isConnected ? "success" : isConnecting ? "warning" : "destructive"}>
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full mr-1.5 inline-block shrink-0 ${
+                                isConnected
+                                  ? "bg-green-500"
+                                  : isConnecting
+                                  ? "bg-yellow-500 animate-pulse"
+                                  : "bg-red-500"
+                              }`}
+                              style={{
+                                backgroundColor: isConnected ? "#22c55e" : isConnecting ? "#eab308" : "#ef4444",
+                              }}
+                            />
+                            {isConnected ? "Conectado" : isConnecting ? "Conectando..." : "Desconectado"}
                           </Badge>
                         </td>
                         <td className="py-3 px-3 font-mono text-xs text-muted-foreground">
@@ -208,15 +227,33 @@ export function InstanceOverviewTable({
             <div className="block md:hidden space-y-3">
               {filteredInstances.slice(0, 6).map((inst) => {
                 const isConnected = inst.connected || inst.status === "open";
+                const isConnecting = !isConnected && inst.status === "connecting";
                 return (
                   <div
                     key={inst.id}
                     className="p-3.5 rounded-lg border border-border bg-card shadow-2xs space-y-3"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-sm text-foreground">{inst.name}</span>
-                      <Badge variant={isConnected ? "success" : "destructive"}>
-                        {isConnected ? "Conectado" : "Desconectado"}
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-md bg-muted/60 border border-border/50 flex items-center justify-center shrink-0">
+                          <Smartphone className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <span className="font-semibold text-sm text-foreground">{inst.name}</span>
+                      </div>
+                      <Badge variant={isConnected ? "success" : isConnecting ? "warning" : "destructive"}>
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full mr-1.5 inline-block shrink-0 ${
+                            isConnected
+                              ? "bg-green-500"
+                              : isConnecting
+                              ? "bg-yellow-500 animate-pulse"
+                              : "bg-red-500"
+                          }`}
+                          style={{
+                            backgroundColor: isConnected ? "#22c55e" : isConnecting ? "#eab308" : "#ef4444",
+                          }}
+                        />
+                        {isConnected ? "Conectado" : isConnecting ? "Conectando..." : "Desconectado"}
                       </Badge>
                     </div>
 

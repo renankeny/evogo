@@ -58,11 +58,11 @@ export function PageHeader({
     >
       <div className="space-y-1">
         <div className="flex items-center gap-2.5">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground dark:text-gray-100">{title}</h1>
           {badge}
         </div>
         {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm text-muted-foreground dark:text-gray-400">{description}</p>
         )}
       </div>
 

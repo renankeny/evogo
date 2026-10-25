@@ -74,12 +74,13 @@ export function InstanceLogsModal({ isOpen, onClose, instance }: InstanceLogsMod
         <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-border">
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
+                type="search"
                 placeholder="Filtrar eventos e erros..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 h-8 text-xs font-mono"
+                className="pl-9 h-8 text-xs font-mono"
               />
             </div>
             <select
