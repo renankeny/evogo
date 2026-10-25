@@ -101,7 +101,7 @@ export function QuickSendModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Disparo Rápido de Teste" className="max-w-xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="Disparo Rápido de Teste">
       <form onSubmit={handleSend} className="space-y-4">
         {/* Instância Selector */}
         <div>

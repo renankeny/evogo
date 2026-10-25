@@ -67,7 +67,7 @@ export function InstanceLogsModal({ isOpen, onClose, instance }: InstanceLogsMod
       isOpen={isOpen}
       onClose={onClose}
       title={`Logs de Operação - ${instance?.name || "Instância"}`}
-      className="max-w-3xl"
+      className="max-w-2xl"
     >
       <div className="space-y-3">
         {/* Controls Toolbar */}
