@@ -1,5 +1,5 @@
 import React from "react";
-import { QrCode, Power, Trash2, Smartphone, Settings } from "lucide-react";
+import { QrCode, Power, Trash2, Smartphone, Settings, Terminal } from "lucide-react";
 import { maskApiKey } from "@/utils/maskApiKey";
 import type { InstanceDTO } from "@/types/InstanceDTO";
 
@@ -8,6 +8,7 @@ export interface InstanceCardProps {
   onConnect: (instance: InstanceDTO) => void;
   onDisconnect: (instance: InstanceDTO) => void;
   onSettings?: (instance: InstanceDTO) => void;
+  onLogs?: (instance: InstanceDTO) => void;
   onForceReconnect?: (instance: InstanceDTO) => void;
   onDelete: (instance: InstanceDTO) => void;
   loadingAction?: boolean;
@@ -18,6 +19,7 @@ export function InstanceCard({
   onConnect,
   onDisconnect,
   onSettings,
+  onLogs,
   onDelete,
 }: InstanceCardProps) {
   const isConnected = Boolean(instance.connected || instance.status === "open");
@@ -85,10 +87,11 @@ export function InstanceCard({
           </div>
         </div>
 
-        <div className="flex border-t border-sidebar-border opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+        <div className="flex border-t border-sidebar-border bg-sidebar/50">
           {!isConnected ? (
             <button
-              className="flex-1 rounded-none h-12 text-green-500 hover:text-green-400 hover:bg-green-500/10 flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
+              type="button"
+              className="flex-1 rounded-none h-12 text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
               onClick={() => onConnect(instance)}
             >
               <QrCode className="h-4 w-4 mr-2" />
@@ -96,7 +99,8 @@ export function InstanceCard({
             </button>
           ) : (
             <button
-              className="flex-1 rounded-none h-12 text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
+              type="button"
+              className="flex-1 rounded-none h-12 text-amber-600 dark:text-amber-400 hover:text-amber-500 hover:bg-amber-500/10 flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
               onClick={() => onDisconnect(instance)}
             >
               <Power className="h-4 w-4 mr-2" />
@@ -106,10 +110,25 @@ export function InstanceCard({
 
           <div className="w-px bg-sidebar-border" />
 
+          {onLogs && (
+            <>
+              <button
+                type="button"
+                className="rounded-none h-12 px-3 text-sidebar-foreground hover:text-emerald-500 hover:bg-sidebar-accent flex items-center justify-center transition-colors cursor-pointer"
+                onClick={() => onLogs(instance)}
+                title="Logs em tempo real"
+              >
+                <Terminal className="h-4 w-4" />
+              </button>
+              <div className="w-px bg-sidebar-border" />
+            </>
+          )}
+
           {onSettings && (
             <>
               <button
-                className="rounded-none h-12 px-4 text-sidebar-foreground hover:bg-sidebar-accent flex items-center justify-center transition-colors cursor-pointer"
+                type="button"
+                className="rounded-none h-12 px-3.5 text-sidebar-foreground hover:bg-sidebar-accent flex items-center justify-center transition-colors cursor-pointer"
                 onClick={() => onSettings(instance)}
                 title="Configurações da instância"
               >
@@ -120,7 +139,8 @@ export function InstanceCard({
           )}
 
           <button
-            className="rounded-none h-12 px-4 text-red-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors cursor-pointer"
+            type="button"
+            className="rounded-none h-12 px-3.5 text-red-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors cursor-pointer"
             onClick={() => onDelete(instance)}
             title="Excluir instância"
           >

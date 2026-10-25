@@ -9,7 +9,7 @@ import { QuickActionsCard } from "@/components/dashboard/QuickActionsCard";
 import { InstanceOverviewTable } from "@/components/dashboard/InstanceOverviewTable";
 import { CreateInstanceModal } from "@/components/instances/CreateInstanceModal";
 import { QuickSendModal } from "@/components/dashboard/QuickSendModal";
-import { InstanceLogsModal } from "@/components/dashboard/InstanceLogsModal";
+import { useLiveLogs } from "@/contexts/LiveLogsContext";
 import { Button } from "@/components/ui/Button";
 import { instancesService } from "@/services/instancesService";
 import type { CreateInstancePayload, InstanceDTO } from "@/types/InstanceDTO";
@@ -17,13 +17,12 @@ import type { CreateInstancePayload, InstanceDTO } from "@/types/InstanceDTO";
 export default function DashboardPage() {
   const { instances, loading, fetchInstances, createInstance } = useInstances(10000);
   const { apiKey, apiUrl } = useAuth();
+  const { openLogs } = useLiveLogs();
 
   // Modais
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isQuickSendOpen, setIsQuickSendOpen] = useState(false);
   const [quickSendPreselectedId, setQuickSendPreselectedId] = useState<string | undefined>(undefined);
-  const [isLogsOpen, setIsLogsOpen] = useState(false);
-  const [selectedLogsInstance, setSelectedLogsInstance] = useState<InstanceDTO | null>(null);
 
   const totalInstances = instances.length;
   const connectedCount = instances.filter((i) => i.connected || i.status === "open").length;
@@ -37,8 +36,7 @@ export default function DashboardPage() {
   };
 
   const handleOpenLogs = (instance: InstanceDTO) => {
-    setSelectedLogsInstance(instance);
-    setIsLogsOpen(true);
+    openLogs(instance);
   };
 
   const handleReconnectAll = async () => {
@@ -153,16 +151,7 @@ export default function DashboardPage() {
         instances={instances}
         preselectedInstanceId={quickSendPreselectedId}
       />
-
-      {/* Modal Logs da Instância */}
-      <InstanceLogsModal
-        isOpen={isLogsOpen}
-        onClose={() => {
-          setIsLogsOpen(false);
-          setSelectedLogsInstance(null);
-        }}
-        instance={selectedLogsInstance}
-      />
     </PageContainer>
   );
 }
+

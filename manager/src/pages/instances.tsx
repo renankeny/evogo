@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Smartphone } from "lucide-react";
 import { useInstances } from "@/hooks/useInstances";
+import { useLiveLogs } from "@/contexts/LiveLogsContext";
 import { Button } from "@/components/ui/Button";
 import { InstanceCard } from "@/components/instances/InstanceCard";
 import { CreateInstanceModal } from "@/components/instances/CreateInstanceModal";
@@ -21,6 +22,8 @@ export default function InstancesPage() {
     deleteInstance,
     getQrCode,
   } = useInstances(3000);
+
+  const { openLogs } = useLiveLogs();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -190,6 +193,7 @@ export default function InstancesPage() {
                 onDisconnect={(inst) => setInstanceToDisconnect(inst)}
                 onDelete={(inst) => setInstanceToDelete(inst)}
                 onSettings={(inst) => navigate(`/manager/instances/${inst.id}/settings`)}
+                onLogs={(inst) => openLogs(inst)}
                 loadingAction={loading}
               />
             ))}
