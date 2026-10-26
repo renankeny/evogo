@@ -12,6 +12,7 @@ import { QuickSendModal } from "@/components/dashboard/QuickSendModal";
 import { useLiveLogs } from "@/contexts/LiveLogsContext";
 import { Button } from "@/components/ui/Button";
 import { instancesService } from "@/services/instancesService";
+import { getInstanceStatus } from "@/utils/instanceStatus";
 import type { CreateInstancePayload, InstanceDTO } from "@/types/InstanceDTO";
 
 export default function DashboardPage() {
@@ -25,8 +26,9 @@ export default function DashboardPage() {
   const [quickSendPreselectedId, setQuickSendPreselectedId] = useState<string | undefined>(undefined);
 
   const totalInstances = instances.length;
-  const connectedCount = instances.filter((i) => i.connected || i.status === "open").length;
-  const disconnectedCount = totalInstances - connectedCount;
+  const connectedCount = instances.filter((i) => getInstanceStatus(i).isOnline).length;
+  const connectingCount = instances.filter((i) => getInstanceStatus(i).isConnecting).length;
+  const disconnectedCount = instances.filter((i) => getInstanceStatus(i).state === "disconnected").length;
   const connectionRate =
     totalInstances > 0 ? Math.round((connectedCount / totalInstances) * 100) : 0;
 
@@ -40,7 +42,7 @@ export default function DashboardPage() {
   };
 
   const handleReconnectAll = async () => {
-    const disconnected = instances.filter((i) => !i.connected && i.status !== "open");
+    const disconnected = instances.filter((i) => getInstanceStatus(i).state === "disconnected");
     const tokens = disconnected.map((i) => i.apikey).filter(Boolean);
     if (tokens.length > 0) {
       await instancesService.reconnectAll(tokens);
@@ -97,7 +99,7 @@ export default function DashboardPage() {
           id="kpi-disconnected-instances"
           title="Desconectadas"
           value={disconnectedCount}
-          subtitle="Requerem conexão"
+          subtitle={connectingCount > 0 ? `${connectingCount} em conexão...` : "Requerem conexão"}
           icon={AlertTriangle}
           iconColor={disconnectedCount > 0 ? "text-amber-500" : "text-muted-foreground"}
         />
@@ -133,6 +135,7 @@ export default function DashboardPage() {
         onQuickSend={(inst) => handleOpenQuickSend(inst)}
         onViewLogs={(inst) => handleOpenLogs(inst)}
         onReconnectAll={handleReconnectAll}
+        onOpenCreateModal={() => setIsCreateOpen(true)}
       />
 
       {/* Modal Nova Instância */}

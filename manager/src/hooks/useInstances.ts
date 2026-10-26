@@ -37,29 +37,79 @@ export function useInstances(pollInterval = 5000) {
   };
 
   const connectInstance = async (token: string, options?: ConnectInstanceOptions) => {
-    const res = await instancesService.connect(token, options);
-    await fetchInstances(true);
-    return res;
+    setInstances((prev) =>
+      prev.map((inst) =>
+        inst.apikey === token ? { ...inst, status: "connecting", connected: false } : inst
+      )
+    );
+    try {
+      const res = await instancesService.connect(token, options);
+      await fetchInstances(true);
+      return res;
+    } catch (e) {
+      await fetchInstances(true);
+      throw e;
+    }
   };
 
   const disconnectInstance = async (token: string) => {
-    await instancesService.disconnect(token);
-    await fetchInstances(true);
+    setInstances((prev) =>
+      prev.map((inst) =>
+        inst.apikey === token ? { ...inst, status: "close", connected: false } : inst
+      )
+    );
+    try {
+      await instancesService.disconnect(token);
+      await fetchInstances(true);
+    } catch (e) {
+      await fetchInstances(true);
+      throw e;
+    }
   };
 
   const logoutInstance = async (token: string) => {
-    await instancesService.logout(token);
-    await fetchInstances(true);
+    setInstances((prev) =>
+      prev.map((inst) =>
+        inst.apikey === token ? { ...inst, status: "close", connected: false } : inst
+      )
+    );
+    try {
+      await instancesService.logout(token);
+      await fetchInstances(true);
+    } catch (e) {
+      await fetchInstances(true);
+      throw e;
+    }
   };
 
   const reconnectInstance = async (token: string) => {
-    await instancesService.reconnect(token);
-    await fetchInstances(true);
+    setInstances((prev) =>
+      prev.map((inst) =>
+        inst.apikey === token ? { ...inst, status: "connecting", connected: false } : inst
+      )
+    );
+    try {
+      await instancesService.reconnect(token);
+      await fetchInstances(true);
+    } catch (e) {
+      await fetchInstances(true);
+      throw e;
+    }
   };
 
   const forceReconnectInstance = async (instanceId: string) => {
-    await instancesService.forceReconnect(instanceId);
-    await fetchInstances(true);
+    setInstances((prev) =>
+      prev.map((inst) =>
+        inst.id === instanceId ? { ...inst, status: "connecting", connected: false } : inst
+      )
+    );
+    try {
+      await instancesService.forceReconnect(instanceId);
+      await fetchInstances(true);
+    } catch (e) {
+      await fetchInstances(true);
+      throw e;
+    }
   };
 
   const deleteInstance = async (instanceId: string) => {

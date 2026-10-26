@@ -23,7 +23,7 @@ function mapRawInstance(raw: any): InstanceDTO {
     status: status,
     apikey: raw.token,
     owner: raw.jid ? raw.jid.split("@")[0] : undefined,
-    profileName: raw.name,
+    profileName: raw.profileName || raw.name,
     profilePicUrl: raw.profilePicUrl || undefined,
     profileStatus: raw.profileStatus || undefined,
     connected: Boolean(raw.connected),
@@ -37,6 +37,7 @@ function mapRawInstance(raw: any): InstanceDTO {
     createdAt: raw.createdAt,
     alwaysOnline: Boolean(raw.alwaysOnline),
     rejectCall: Boolean(raw.rejectCall),
+    msgRejectCall: raw.msgRejectCall || "",
     readMessages: Boolean(raw.readMessages),
     ignoreGroups: Boolean(raw.ignoreGroups),
     ignoreStatus: Boolean(raw.ignoreStatus),
@@ -198,7 +199,7 @@ export const instancesService = {
 
   async reconnectAll(tokens: string[]): Promise<void> {
     await Promise.allSettled(
-      tokens.map((token) => instancesService.connect(token))
+      tokens.map((token) => instancesService.reconnect(token))
     );
   },
 };

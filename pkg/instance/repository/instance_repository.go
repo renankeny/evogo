@@ -26,6 +26,7 @@ type InstanceRepository interface {
 	UpdateQrcode(userId string, qr string) error
 	UpdateProxy(userId string, proxy string) error
 	UpdateJid(userId string, jid string) error
+	UpdateProfileInfo(userId string, profileName string, profilePicUrl string) error
 	GetAllConnectedInstances() ([]*instance_model.Instance, error)
 	GetAllConnectedInstancesByClientName(clientName string) ([]*instance_model.Instance, error)
 	GetAll(clientName string) ([]*instance_model.Instance, error)
@@ -114,6 +115,20 @@ func (i *instanceRepository) UpdateProxy(userId string, proxy string) error {
 
 func (i *instanceRepository) UpdateJid(userId string, jid string) error {
 	return i.db.Model(&instance_model.Instance{}).Where("id = ?", userId).Update("jid", jid).Error
+}
+
+func (i *instanceRepository) UpdateProfileInfo(userId string, profileName string, profilePicUrl string) error {
+	updates := map[string]interface{}{}
+	if profileName != "" {
+		updates["profile_name"] = profileName
+	}
+	if profilePicUrl != "" {
+		updates["profile_pic_url"] = profilePicUrl
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	return i.db.Model(&instance_model.Instance{}).Where("id = ?", userId).Updates(updates).Error
 }
 
 func (i *instanceRepository) GetAllConnectedInstances() ([]*instance_model.Instance, error) {

@@ -1,6 +1,7 @@
 import React from "react";
 import { QrCode, Power, Trash2, Smartphone, Settings } from "lucide-react";
 import { maskApiKey } from "@/utils/maskApiKey";
+import { getInstanceStatus } from "@/utils/instanceStatus";
 import type { InstanceDTO } from "@/types/InstanceDTO";
 
 export interface InstanceCardProps {
@@ -20,25 +21,24 @@ export function InstanceCard({
   onSettings,
   onDelete,
 }: InstanceCardProps) {
-  const isConnected = Boolean(instance.connected || instance.status === "open");
-  const isConnecting = !isConnected && (instance.status === "connecting" || Boolean(instance.qrcode));
+  const statusInfo = getInstanceStatus(instance);
+  const isConnected = statusInfo.isOnline;
+  const isConnecting = statusInfo.isConnecting;
 
   return (
     <div className="group relative bg-sidebar border border-sidebar-border hover:bg-sidebar-accent/30 transition-all duration-300 hover:shadow-lg hover:shadow-black/10 overflow-hidden rounded-lg">
       <div className="p-0">
         <div className="flex items-center gap-3 p-4 border-b border-sidebar-border">
           {instance.profilePicUrl ? (
-            <div className="flex-shrink-0 dark">
-              <div className="rounded-lg bg-gray-900 flex items-center justify-center w-14 h-14 overflow-hidden">
-                <img
-                  src={instance.profilePicUrl}
-                  alt={instance.name}
-                  className="w-12 h-12 object-cover rounded-lg"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = "none";
-                  }}
-                />
-              </div>
+            <div className="rounded-lg bg-muted border border-border/50 flex items-center justify-center w-12 h-12 overflow-hidden flex-shrink-0">
+              <img
+                src={instance.profilePicUrl}
+                alt={instance.name}
+                className="w-full h-full object-cover rounded-lg"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = "none";
+                }}
+              />
             </div>
           ) : (
             <div className="rounded-lg bg-muted flex items-center justify-center w-12 h-12 overflow-hidden flex-shrink-0">
@@ -55,27 +55,15 @@ export function InstanceCard({
 
           <div className="flex-shrink-0">
             <span
-              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                isConnected
-                  ? "badge-status-connected"
-                  : isConnecting
-                  ? "badge-status-connecting animate-pulse"
-                  : "badge-status-disconnected"
-              }`}
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusInfo.badgeClass}`}
             >
               <span
-                className={`h-1.5 w-1.5 rounded-full mr-1.5 inline-block shrink-0 ${
-                  isConnected
-                    ? "bg-green-500"
-                    : isConnecting
-                    ? "bg-yellow-500 animate-pulse"
-                    : "bg-red-500"
-                }`}
+                className={`h-1.5 w-1.5 rounded-full mr-1.5 inline-block shrink-0 ${statusInfo.dotClass}`}
                 style={{
-                  backgroundColor: isConnected ? "#22c55e" : isConnecting ? "#eab308" : "#ef4444",
+                  backgroundColor: statusInfo.dotColor,
                 }}
               />
-              {isConnected ? "Conectado" : isConnecting ? "Conectando..." : "Desconectado"}
+              {statusInfo.label}
             </span>
           </div>
         </div>
@@ -83,7 +71,7 @@ export function InstanceCard({
         <div className="px-4 py-3 text-xs text-sidebar-foreground/70 space-y-1">
           <div className="flex items-center justify-between">
             <span>Status</span>
-            <span className="font-mono">{isConnected ? "open" : isConnecting ? "connecting" : "close"}</span>
+            <span className="font-mono">{statusInfo.rawStatus}</span>
           </div>
           {instance.owner && (
             <div className="flex items-center justify-between">

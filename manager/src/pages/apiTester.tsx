@@ -10,7 +10,7 @@ import { useInstances } from "@/hooks/useInstances";
 
 export default function ApiTesterPage() {
   const { instances } = useInstances(0);
-  const [method, setMethod] = useState<"GET" | "POST">("GET");
+  const [method, setMethod] = useState<"GET" | "POST" | "PUT" | "DELETE">("GET");
   const [endpoint, setEndpoint] = useState("/server/ok");
   const [selectedToken, setSelectedToken] = useState("");
   const [requestBody, setRequestBody] = useState("");
@@ -21,15 +21,16 @@ export default function ApiTesterPage() {
   const [copied, setCopied] = useState(false);
 
   const presets = [
-    { label: "Status do Servidor", method: "GET", endpoint: "/server/ok", body: "" },
-    { label: "Health Check", method: "GET", endpoint: "/health", body: "" },
-    { label: "Listar Todas Instâncias", method: "GET", endpoint: "/instance/all", body: "" },
-    { label: "Status da Instância", method: "GET", endpoint: "/instance/status", body: "" },
-    { label: "Obter QR Code", method: "GET", endpoint: "/instance/qr", body: "" },
+    { label: "Status do Servidor", method: "GET", endpoint: "/server/ok", body: "", requiresInstance: false },
+    { label: "Health Check", method: "GET", endpoint: "/health", body: "", requiresInstance: false },
+    { label: "Listar Todas Instâncias", method: "GET", endpoint: "/instance/all", body: "", requiresInstance: false },
+    { label: "Status da Instância", method: "GET", endpoint: "/instance/status", body: "", requiresInstance: true },
+    { label: "Obter QR Code", method: "GET", endpoint: "/instance/qr", body: "", requiresInstance: true },
     {
       label: "Enviar Mensagem de Texto",
       method: "POST",
       endpoint: "/send/text",
+      requiresInstance: true,
       body: JSON.stringify(
         {
           number: "5511999999999",
@@ -43,6 +44,7 @@ export default function ApiTesterPage() {
       label: "Conectar Instância",
       method: "POST",
       endpoint: "/instance/connect",
+      requiresInstance: true,
       body: JSON.stringify(
         {
           subscribe: ["MESSAGE", "SEND_MESSAGE", "CONNECTION"],
@@ -51,16 +53,42 @@ export default function ApiTesterPage() {
         2
       ),
     },
-    { label: "Desconectar Instância", method: "POST", endpoint: "/instance/disconnect", body: "" },
+    { label: "Desconectar Instância", method: "POST", endpoint: "/instance/disconnect", body: "", requiresInstance: true },
   ];
 
   const handleApplyPreset = (preset: (typeof presets)[0]) => {
-    setMethod(preset.method as "GET" | "POST");
+    setMethod(preset.method as "GET" | "POST" | "PUT" | "DELETE");
     setEndpoint(preset.endpoint);
     setRequestBody(preset.body);
+    if (preset.requiresInstance && !selectedToken && instances.length > 0) {
+      setSelectedToken(instances[0].apikey);
+    }
   };
 
   const handleExecute = async () => {
+    const cleanEndpoint = endpoint.trim().startsWith("/") ? endpoint.trim() : `/${endpoint.trim()}`;
+
+    let payload: any = {};
+    if (["POST", "PUT"].includes(method) && requestBody.trim()) {
+      try {
+        payload = JSON.parse(requestBody);
+      } catch (parseErr: any) {
+        setResponseStatus(400);
+        setLatencyMs(0);
+        setResponseData(
+          JSON.stringify(
+            {
+              error: "JSON inválido no corpo da requisição",
+              detalhes: parseErr?.message || "Verifique a formatação do JSON digitado.",
+            },
+            null,
+            2
+          )
+        );
+        return;
+      }
+    }
+
     setLoading(true);
     setResponseStatus(null);
     setResponseData(null);
@@ -75,10 +103,13 @@ export default function ApiTesterPage() {
 
       let res;
       if (method === "GET") {
-        res = await apiClient.get(endpoint, { headers });
+        res = await apiClient.get(cleanEndpoint, { headers });
+      } else if (method === "POST") {
+        res = await apiClient.post(cleanEndpoint, payload, { headers });
+      } else if (method === "PUT") {
+        res = await apiClient.put(cleanEndpoint, payload, { headers });
       } else {
-        const payload = requestBody ? JSON.parse(requestBody) : {};
-        res = await apiClient.post(endpoint, payload, { headers });
+        res = await apiClient.delete(cleanEndpoint, { headers });
       }
       setLatencyMs(Math.round(performance.now() - start));
       setResponseStatus(res.status);
@@ -159,15 +190,21 @@ export default function ApiTesterPage() {
               <div className="flex gap-2">
                 <select
                   value={method}
-                  onChange={(e) => setMethod(e.target.value as "GET" | "POST")}
+                  onChange={(e) => setMethod(e.target.value as "GET" | "POST" | "PUT" | "DELETE")}
                   className={`rounded-md border px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer ${
                     method === "GET"
                       ? "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                      : "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      : method === "POST"
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      : method === "PUT"
+                      ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                      : "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400"
                   }`}
                 >
                   <option value="GET">GET</option>
                   <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="DELETE">DELETE</option>
                 </select>
                 <Input
                   value={endpoint}
@@ -199,8 +236,8 @@ export default function ApiTesterPage() {
               </div>
             )}
 
-            {/* Body para POST */}
-            {method === "POST" && (
+            {/* Body para POST e PUT */}
+            {["POST", "PUT"].includes(method) && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-semibold text-muted-foreground uppercase">

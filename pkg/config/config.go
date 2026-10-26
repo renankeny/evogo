@@ -290,10 +290,7 @@ func Load() *Config {
 		webhookFiles = "true"
 	}
 
-	connectOnStartup := os.Getenv(config_env.CONNECT_ON_STARTUP)
-	if connectOnStartup == "" {
-		connectOnStartup = "false"
-	}
+	connectOnStartup := true
 
 	osName := os.Getenv(config_env.OS_NAME)
 
@@ -428,7 +425,7 @@ func Load() *Config {
 		WaDebug:              waDebug,
 		LogType:              logType,
 		WebhookFiles:         webhookFiles == "true",
-		ConnectOnStartup:     connectOnStartup == "true",
+		ConnectOnStartup:     connectOnStartup,
 		OsName:               osName,
 		AmqpUrl:              amqpUrl,
 		AmqpGlobalEnabled:    amqpGlobalEnabled == "true",

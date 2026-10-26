@@ -9,11 +9,13 @@ import {
   Terminal,
   RotateCcw,
   ExternalLink,
+  Plus,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { getInstanceStatus } from "@/utils/instanceStatus";
 import type { InstanceDTO } from "@/types/InstanceDTO";
 
 export interface InstanceOverviewTableProps {
@@ -24,6 +26,7 @@ export interface InstanceOverviewTableProps {
   onQuickSend?: (instance: InstanceDTO) => void;
   onViewLogs?: (instance: InstanceDTO) => void;
   onReconnectAll?: () => Promise<void>;
+  onOpenCreateModal?: () => void;
 }
 
 export function InstanceOverviewTable({
@@ -34,11 +37,12 @@ export function InstanceOverviewTable({
   onQuickSend,
   onViewLogs,
   onReconnectAll,
+  onOpenCreateModal,
 }: InstanceOverviewTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [reconnectingAll, setReconnectingAll] = useState(false);
 
-  const disconnectedCount = instances.filter((i) => !i.connected && i.status !== "open").length;
+  const disconnectedCount = instances.filter((i) => getInstanceStatus(i).state === "disconnected").length;
 
   const filteredInstances = instances.filter((inst) => {
     if (!searchTerm.trim()) return true;
@@ -122,8 +126,22 @@ export function InstanceOverviewTable({
 
       <CardContent className="pt-4">
         {instances.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            Nenhuma instância encontrada. Crie sua primeira instância para começar.
+          <div className="py-10 text-center flex flex-col items-center justify-center space-y-3">
+            <div className="h-10 w-10 rounded-full bg-muted/60 border border-border flex items-center justify-center text-muted-foreground">
+              <Smartphone className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">Nenhuma instância cadastrada</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Crie sua primeira instância para conectar ao WhatsApp e começar os disparos.
+              </p>
+            </div>
+            {onOpenCreateModal && (
+              <Button size="sm" onClick={onOpenCreateModal} className="gap-1.5 cursor-pointer mt-1">
+                <Plus className="h-3.5 w-3.5" />
+                Criar Primeira Instância
+              </Button>
+            )}
           </div>
         ) : filteredInstances.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
@@ -144,8 +162,7 @@ export function InstanceOverviewTable({
                 </thead>
                 <tbody className="divide-y divide-border/40">
                   {filteredInstances.slice(0, 6).map((inst) => {
-                    const isConnected = inst.connected || inst.status === "open";
-                    const isConnecting = !isConnected && inst.status === "connecting";
+                    const statusInfo = getInstanceStatus(inst);
                     return (
                       <tr key={inst.id} className="hover:bg-muted/30 transition-colors">
                         <td className="py-3 px-3">
@@ -157,20 +174,14 @@ export function InstanceOverviewTable({
                           </div>
                         </td>
                         <td className="py-3 px-3">
-                          <Badge variant={isConnected ? "success" : isConnecting ? "warning" : "destructive"}>
+                          <Badge variant={statusInfo.badgeVariant}>
                             <span
-                              className={`h-1.5 w-1.5 rounded-full mr-1.5 inline-block shrink-0 ${
-                                isConnected
-                                  ? "bg-green-500"
-                                  : isConnecting
-                                  ? "bg-yellow-500 animate-pulse"
-                                  : "bg-red-500"
-                              }`}
+                              className={`h-1.5 w-1.5 rounded-full mr-1.5 inline-block shrink-0 ${statusInfo.dotClass}`}
                               style={{
-                                backgroundColor: isConnected ? "#22c55e" : isConnecting ? "#eab308" : "#ef4444",
+                                backgroundColor: statusInfo.dotColor,
                               }}
                             />
-                            {isConnected ? "Conectado" : isConnecting ? "Conectando..." : "Desconectado"}
+                            {statusInfo.label}
                           </Badge>
                         </td>
                         <td className="py-3 px-3 font-mono text-xs text-muted-foreground">
@@ -226,8 +237,7 @@ export function InstanceOverviewTable({
             {/* Mobile Card List View (< md) */}
             <div className="block md:hidden space-y-3">
               {filteredInstances.slice(0, 6).map((inst) => {
-                const isConnected = inst.connected || inst.status === "open";
-                const isConnecting = !isConnected && inst.status === "connecting";
+                const statusInfo = getInstanceStatus(inst);
                 return (
                   <div
                     key={inst.id}
@@ -240,20 +250,14 @@ export function InstanceOverviewTable({
                         </div>
                         <span className="font-semibold text-sm text-foreground">{inst.name}</span>
                       </div>
-                      <Badge variant={isConnected ? "success" : isConnecting ? "warning" : "destructive"}>
+                      <Badge variant={statusInfo.badgeVariant}>
                         <span
-                          className={`h-1.5 w-1.5 rounded-full mr-1.5 inline-block shrink-0 ${
-                            isConnected
-                              ? "bg-green-500"
-                              : isConnecting
-                              ? "bg-yellow-500 animate-pulse"
-                              : "bg-red-500"
-                          }`}
+                          className={`h-1.5 w-1.5 rounded-full mr-1.5 inline-block shrink-0 ${statusInfo.dotClass}`}
                           style={{
-                            backgroundColor: isConnected ? "#22c55e" : isConnecting ? "#eab308" : "#ef4444",
+                            backgroundColor: statusInfo.dotColor,
                           }}
                         />
-                        {isConnected ? "Conectado" : isConnecting ? "Conectando..." : "Desconectado"}
+                        {statusInfo.label}
                       </Badge>
                     </div>
 

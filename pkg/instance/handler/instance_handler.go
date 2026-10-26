@@ -34,6 +34,7 @@ type InstanceHandler interface {
 	GetLogs(ctx *gin.Context)
 	GetAdvancedSettings(ctx *gin.Context)
 	UpdateAdvancedSettings(ctx *gin.Context)
+	ConnectionState(ctx *gin.Context)
 }
 
 type instanceHandler struct {
@@ -323,6 +324,31 @@ func (i *instanceHandler) Status(ctx *gin.Context) {
 		"data":    status,
 		"status":  status,
 	})
+}
+
+// Get instance connection state (open, connecting, close)
+// @Summary Get instance connection state
+// @Description Returns instance connection state matching Evolution API spec
+// @Tags Instance
+// @Accept json
+// @Produce json
+// @Param instanceId path string true "Instance Id or Name"
+// @Success 200 {object} gin.H "Instance connection state"
+// @Router /instance/connectionState/{instanceId} [get]
+func (i *instanceHandler) ConnectionState(ctx *gin.Context) {
+	instanceId := ctx.Param("instanceId")
+	if instanceId == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "instanceId is required", "success": false})
+		return
+	}
+
+	state, err := i.instanceService.ConnectionState(instanceId)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error(), "success": false})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, state)
 }
 
 // Get instance QR code

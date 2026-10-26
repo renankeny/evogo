@@ -39,13 +39,8 @@ function getStoredServerStartTime(): number {
   } catch (e) {
     // ignore
   }
-  // Server process boot time (01:09 AM today)
-  const defaultStart = 1792901392000;
-  try {
-    localStorage.setItem(KEY, String(defaultStart));
-  } catch (e) {
-    // ignore
-  }
+  // Initial start time defaults to current moment until /health ping resolves
+  const defaultStart = Date.now();
   return defaultStart;
 }
 
@@ -162,7 +157,7 @@ export function SystemStatusCard({ id, isOnline: initialOnline }: SystemStatusCa
             <Cpu className="h-4 w-4 text-muted-foreground" />
             Versão
           </span>
-          <span className="font-medium text-foreground">Evolution Go {version} (WhatsTracker)</span>
+          <span className="font-medium text-foreground">Evolution Go {version}</span>
         </div>
 
         {/* 2. Banco de Dados */}

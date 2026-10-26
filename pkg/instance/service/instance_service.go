@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -45,6 +44,14 @@ type InstanceService interface {
 	GetLogs(instanceId string, startDate, endDate time.Time, level string, limit int) ([]logger_wrapper.LogEntry, error)
 	GetAdvancedSettings(instanceId string) (*instance_model.AdvancedSettings, error)
 	UpdateAdvancedSettings(instanceId string, settings *instance_model.AdvancedSettings) error
+	ConnectionState(instanceId string) (*ConnectionStateResponse, error)
+}
+
+type ConnectionStateResponse struct {
+	Instance struct {
+		InstanceName string `json:"instanceName"`
+		State        string `json:"state"`
+	} `json:"instance"`
 }
 
 type instances struct {
@@ -129,46 +136,6 @@ type ForceReconnectStruct struct {
 	Number string `json:"number"`
 }
 
-func (i *instances) ensureClientConnected(instanceId string) (*whatsmeow.Client, error) {
-	logger := i.loggerWrapper.GetLogger(instanceId)
-	client := i.clientPointer[instanceId]
-	logger.LogInfo("[%s] Checking client connection status - Client exists: %v", instanceId, client != nil)
-
-	if client == nil {
-		logger.LogInfo("[%s] No client found, attempting to start new instance", instanceId)
-		err := i.whatsmeowService.StartInstance(instanceId)
-		if err != nil {
-			logger.LogError("[%s] Failed to start instance: %v", instanceId, err)
-			return nil, errors.New("no active session found")
-		}
-
-		logger.LogInfo("[%s] Instance started, waiting 2 seconds...", instanceId)
-		time.Sleep(2 * time.Second)
-
-		client = i.clientPointer[instanceId]
-		logger.LogInfo("[%s] Checking new client - Exists: %v, Connected: %v",
-			instanceId,
-			client != nil,
-			client != nil && client.IsConnected())
-
-		if client == nil || !client.IsConnected() {
-			logger.LogError("[%s] New client validation failed - Exists: %v, Connected: %v",
-				instanceId,
-				client != nil,
-				client != nil && client.IsConnected())
-			return nil, errors.New("no active session found")
-		}
-	} else if !client.IsConnected() {
-		logger.LogError("[%s] Existing client is disconnected - Connected status: %v",
-			instanceId,
-			client.IsConnected())
-		return nil, errors.New("client disconnected")
-	}
-
-	logger.LogInfo("[%s] Client successfully validated - Connected: %v", instanceId, client.IsConnected())
-	return client, nil
-}
-
 func (i instances) Create(data *CreateStruct) (*instance_model.Instance, error) {
 	if data.Proxy != nil {
 		data.Proxy.Protocol = utils.NormalizeProxyProtocol(data.Proxy.Protocol, data.Proxy.Port)
@@ -235,6 +202,9 @@ func (i instances) Connect(data *ConnectStruct, instance *instance_model.Instanc
 				}
 			}
 			instance.Events = strings.Join(subscribedEvents, ",")
+		} else if data.Subscribe != nil {
+			// Explicit empty array sent -> clear all subscribed events
+			instance.Events = ""
 		} else if instance.Events != "" {
 			// Keep existing subscribed events from instance configuration
 			for _, evt := range strings.Split(instance.Events, ",") {
@@ -347,11 +317,13 @@ func (i instances) Connect(data *ConnectStruct, instance *instance_model.Instanc
 }
 
 func (i instances) Reconnect(instance *instance_model.Instance) error {
-	_, err := i.ensureClientConnected(instance.Id)
-	if err != nil {
-		return err
+	client := i.clientPointer[instance.Id]
+	if client == nil {
+		i.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] Reconnect: No active client in memory, starting instance", instance.Id)
+		return i.whatsmeowService.StartInstance(instance.Id)
 	}
 
+	i.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] Reconnect: Client found in memory, reconnecting socket", instance.Id)
 	return i.whatsmeowService.ReconnectClient(instance.Id)
 }
 
@@ -584,6 +556,21 @@ func (i instances) GetAll() ([]*instance_model.Instance, error) {
 			if client.Store != nil && client.Store.ID != nil && instance.Jid == "" {
 				instance.Jid = client.Store.ID.String()
 			}
+			if client.Store != nil && client.Store.PushName != "" && instance.ProfileName == "" {
+				instance.ProfileName = client.Store.PushName
+			}
+			// Se estiver conectado mas ainda não tiver foto salva, busca em background
+			if client.IsConnected() && client.Store != nil && client.Store.ID != nil && instance.ProfilePicUrl == "" {
+				go func(instId string, cli *whatsmeow.Client) {
+					userJID := cli.Store.ID.ToNonAD()
+					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+					defer cancel()
+					pic, err := cli.GetProfilePictureInfo(ctx, userJID, &whatsmeow.GetProfilePictureParams{Preview: true})
+					if err == nil && pic != nil && pic.URL != "" {
+						_ = i.instanceRepository.UpdateProfileInfo(instId, cli.Store.PushName, pic.URL)
+					}
+				}(instance.Id, client)
+			}
 		} else {
 			instance.Connected = false
 		}
@@ -609,6 +596,20 @@ func (i instances) Info(instanceId string) (*instance_model.Instance, error) {
 		instance.Connected = client.IsConnected() && client.IsLoggedIn()
 		if client.Store != nil && client.Store.ID != nil && instance.Jid == "" {
 			instance.Jid = client.Store.ID.String()
+		}
+		if client.Store != nil && client.Store.PushName != "" && instance.ProfileName == "" {
+			instance.ProfileName = client.Store.PushName
+		}
+		if client.IsConnected() && client.Store != nil && client.Store.ID != nil && instance.ProfilePicUrl == "" {
+			go func(instId string, cli *whatsmeow.Client) {
+				userJID := cli.Store.ID.ToNonAD()
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				pic, err := cli.GetProfilePictureInfo(ctx, userJID, &whatsmeow.GetProfilePictureParams{Preview: true})
+				if err == nil && pic != nil && pic.URL != "" {
+					_ = i.instanceRepository.UpdateProfileInfo(instId, cli.Store.PushName, pic.URL)
+				}
+			}(instance.Id, client)
 		}
 	} else {
 		instance.Connected = false
@@ -736,7 +737,7 @@ func (i instances) RemoveProxy(id string) error {
 }
 
 func (i instances) ForceReconnect(instanceId string, number string) error {
-	if i.clientPointer[instanceId].IsConnected() && i.clientPointer[instanceId].IsLoggedIn() {
+	if client := i.clientPointer[instanceId]; client != nil && client.IsConnected() && client.IsLoggedIn() {
 		return fmt.Errorf("client already connected")
 	}
 
@@ -976,6 +977,32 @@ func (i instances) UpdateAdvancedSettings(instanceId string, settings *instance_
 
 	i.loggerWrapper.GetLogger(instanceId).LogInfo("[%s] Advanced settings updated successfully", instanceId)
 	return nil
+}
+
+func (i instances) ConnectionState(instanceId string) (*ConnectionStateResponse, error) {
+	instance, err := i.instanceRepository.GetInstanceByID(instanceId)
+	if err != nil {
+		instance, err = i.instanceRepository.GetInstanceByName(instanceId)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	state := "close"
+	if client := i.clientPointer[instance.Id]; client != nil {
+		if client.IsConnected() && client.IsLoggedIn() {
+			state = "open"
+		} else if client.IsConnected() || instance.Qrcode != "" {
+			state = "connecting"
+		}
+	} else if instance.Connected {
+		state = "connecting"
+	}
+
+	resp := &ConnectionStateResponse{}
+	resp.Instance.InstanceName = instance.Name
+	resp.Instance.State = state
+	return resp, nil
 }
 
 func NewInstanceService(

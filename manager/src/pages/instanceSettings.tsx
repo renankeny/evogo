@@ -13,8 +13,12 @@ import {
   Sliders,
   AlertTriangle,
   Radio,
+  Copy,
+  RotateCcw,
+  RefreshCw,
 } from "lucide-react";
 import { instancesService } from "@/services/instancesService";
+import { getInstanceStatus } from "@/utils/instanceStatus";
 import { PageContainer, PageHeader } from "@/components/layout/PageContainer";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -47,6 +51,8 @@ export default function InstanceSettingsPage() {
   const [savingWebhook, setSavingWebhook] = useState(false);
   const [savingAdvanced, setSavingAdvanced] = useState(false);
   const [showToken, setShowToken] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   // Estados para modais de confirmação
@@ -64,14 +70,15 @@ export default function InstanceSettingsPage() {
   // Advanced settings state
   const [alwaysOnline, setAlwaysOnline] = useState(false);
   const [rejectCall, setRejectCall] = useState(false);
+  const [msgRejectCall, setMsgRejectCall] = useState("");
   const [readMessages, setReadMessages] = useState(false);
   const [ignoreGroups, setIgnoreGroups] = useState(false);
   const [ignoreStatus, setIgnoreStatus] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     if (!instanceId) return;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await instancesService.getInfo(instanceId);
       setInstance(data);
 
@@ -81,28 +88,41 @@ export default function InstanceSettingsPage() {
       setNatsEnable(data.natsEnable || "");
 
       if (data.events) {
-        setSelectedEvents(
-          data.events.split(",").map((e) => e.trim()).filter(Boolean)
-        );
+        const evts = data.events.split(",").map((e) => e.trim()).filter(Boolean);
+        const nonAll = WEBHOOK_EVENTS.filter((e) => e !== "ALL");
+        const hasAllIndividual = nonAll.length > 0 && nonAll.every((e) => evts.includes(e));
+        if (evts.includes("ALL") || hasAllIndividual) {
+          setSelectedEvents(["ALL"]);
+        } else {
+          setSelectedEvents(evts);
+        }
       } else {
         setSelectedEvents([]);
       }
 
       setAlwaysOnline(Boolean(data.alwaysOnline));
       setRejectCall(Boolean(data.rejectCall));
+      setMsgRejectCall(data.msgRejectCall || "");
       setReadMessages(Boolean(data.readMessages));
       setIgnoreGroups(Boolean(data.ignoreGroups));
       setIgnoreStatus(Boolean(data.ignoreStatus));
     } catch (err: any) {
-      console.error("Erro ao carregar instância:", err);
-      setFeedback("Erro ao carregar dados da instância.");
+      if (!silent) {
+        console.error("Erro ao carregar instância:", err);
+        setFeedback("Erro ao carregar dados da instância.");
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [instanceId]);
 
   useEffect(() => {
-    loadData();
+    loadData(false);
+    // Auto-sync connection status in background every 6 seconds
+    const interval = setInterval(() => {
+      loadData(true);
+    }, 6000);
+    return () => clearInterval(interval);
   }, [loadData]);
 
   const handleEventToggle = (event: string) => {
@@ -142,6 +162,29 @@ export default function InstanceSettingsPage() {
     }
   };
 
+  const handleCopyToken = () => {
+    if (!instance?.apikey) return;
+    navigator.clipboard.writeText(instance.apikey);
+    setCopiedToken(true);
+    setTimeout(() => setCopiedToken(false), 2000);
+  };
+
+  const handleReconnect = async () => {
+    if (!instance) return;
+    setReconnecting(true);
+    setFeedback(null);
+    try {
+      await instancesService.reconnect(instance.apikey);
+      setFeedback("Comando de reconexão disparado com sucesso!");
+      await loadData(true);
+    } catch (err: any) {
+      console.error("Erro ao reconectar:", err);
+      setFeedback(err?.response?.data?.error || "Erro ao reconectar instância.");
+    } finally {
+      setReconnecting(false);
+    }
+  };
+
   const handleSaveAdvanced = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!instance) return;
@@ -154,6 +197,7 @@ export default function InstanceSettingsPage() {
         {
           alwaysOnline,
           rejectCall,
+          msgRejectCall: msgRejectCall.trim(),
           readMessages,
           ignoreGroups,
           ignoreStatus,
@@ -225,31 +269,45 @@ export default function InstanceSettingsPage() {
     );
   }
 
-  const isConnected = instance.connected || instance.status === "open";
+  const statusInfo = instance ? getInstanceStatus(instance) : null;
+  const isConnected = statusInfo?.isOnline ?? false;
 
   return (
     <PageContainer maxWidth="narrow">
       {/* Standard Header with Back Button */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <button
           onClick={() => navigate("/manager/instances")}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-foreground hover:bg-accent cursor-pointer transition-colors"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-foreground hover:bg-accent cursor-pointer transition-colors shrink-0"
           title="Voltar para instâncias"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <PageHeader
             title="Configurações da Instância"
             description={`Parâmetros, webhooks e comportamento operacional de "${instance.name}".`}
             badge={
-              <Badge variant={isConnected ? "success" : "destructive"}>
-                {isConnected ? "Conectado" : "Desconectado"}
-              </Badge>
+              statusInfo && (
+                <Badge variant={statusInfo.badgeVariant}>
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full mr-1.5 inline-block shrink-0 ${statusInfo.dotClass}`}
+                    style={{ backgroundColor: statusInfo.dotColor }}
+                  />
+                  {statusInfo.label}
+                </Badge>
+              )
             }
             className="pb-0 border-b-0"
           />
         </div>
+        <button
+          onClick={() => loadData(false)}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-foreground hover:bg-accent cursor-pointer transition-colors shrink-0"
+          title="Atualizar dados agora"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        </button>
       </div>
 
       {feedback && (
@@ -285,14 +343,24 @@ export default function InstanceSettingsPage() {
                 <span className="text-xs text-foreground font-mono truncate">
                   {showToken ? instance.apikey : "•".repeat(Math.min(instance.apikey?.length || 16, 24))}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setShowToken(!showToken)}
-                  className="text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
-                  title={showToken ? "Ocultar" : "Mostrar"}
-                >
-                  {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleCopyToken}
+                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                    title="Copiar Token"
+                  >
+                    {copiedToken ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowToken(!showToken)}
+                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                    title={showToken ? "Ocultar" : "Mostrar"}
+                  >
+                    {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -476,20 +544,41 @@ export default function InstanceSettingsPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between py-2 border-b border-border/40">
-              <div>
-                <label htmlFor="rejectCall" className="text-sm font-medium text-foreground cursor-pointer">
-                  Reject Call
-                </label>
-                <p className="text-xs text-muted-foreground">Rejeitar chamadas de voz e vídeo automaticamente.</p>
+            <div className="py-2 border-b border-border/40 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label htmlFor="rejectCall" className="text-sm font-medium text-foreground cursor-pointer">
+                    Reject Call
+                  </label>
+                  <p className="text-xs text-muted-foreground">Rejeitar chamadas de voz e vídeo automaticamente.</p>
+                </div>
+                <input
+                  id="rejectCall"
+                  type="checkbox"
+                  checked={rejectCall}
+                  onChange={(e) => setRejectCall(e.target.checked)}
+                  className="rounded border-input w-4 h-4 cursor-pointer"
+                />
               </div>
-              <input
-                id="rejectCall"
-                type="checkbox"
-                checked={rejectCall}
-                onChange={(e) => setRejectCall(e.target.checked)}
-                className="rounded border-input w-4 h-4 cursor-pointer"
-              />
+
+              {rejectCall && (
+                <div className="pl-3 sm:pl-4 border-l-2 border-primary/40 space-y-1.5 pt-1">
+                  <label htmlFor="msgRejectCall" className="block text-xs font-medium text-foreground">
+                    Mensagem de Resposta Automática (Opcional)
+                  </label>
+                  <input
+                    id="msgRejectCall"
+                    type="text"
+                    placeholder="ex: Não aceitamos chamadas. Por favor, envie uma mensagem de texto."
+                    value={msgRejectCall}
+                    onChange={(e) => setMsgRejectCall(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Esta mensagem será enviada via WhatsApp para quem ligar logo após a rejeição da chamada.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between py-2 border-b border-border/40">
@@ -561,17 +650,35 @@ export default function InstanceSettingsPage() {
         <CardContent className="space-y-4 pt-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <h3 className="text-sm font-medium text-foreground">Desconectar Instância</h3>
-              <p className="text-xs text-muted-foreground">Encerra a sessão ativa do WhatsApp neste dispositivo.</p>
+              <h3 className="text-sm font-medium text-foreground">
+                {statusInfo?.isOnline ? "Desconectar Instância" : "Sessão Desconectada"}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {statusInfo?.isOnline
+                  ? "Encerra a sessão ativa do WhatsApp neste dispositivo."
+                  : "A instância está desconectada. Você pode reconectar o socket da sessão agora."}
+              </p>
             </div>
-            <Button
-              variant="destructive"
-              onClick={() => setIsDisconnectModalOpen(true)}
-              className="gap-2 cursor-pointer shrink-0"
-            >
-              <Power className="h-4 w-4" />
-              Desconectar
-            </Button>
+            {statusInfo?.isOnline ? (
+              <Button
+                variant="destructive"
+                onClick={() => setIsDisconnectModalOpen(true)}
+                className="gap-2 cursor-pointer shrink-0"
+              >
+                <Power className="h-4 w-4" />
+                Desconectar
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={handleReconnect}
+                disabled={reconnecting}
+                className="gap-2 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer shrink-0"
+              >
+                <RotateCcw className={`h-4 w-4 ${reconnecting ? "animate-spin" : ""}`} />
+                {reconnecting ? "Reconectando..." : "Reconectar Agora"}
+              </Button>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-3 border-t border-destructive/20">

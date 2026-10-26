@@ -25,6 +25,8 @@ type Instance struct {
 	OsName           string    `json:"os_name"`
 	Proxy            string    `json:"proxy"`
 	ClientName       string    `json:"client_name"`
+	ProfilePicUrl    string    `json:"profilePicUrl" gorm:"column:profile_pic_url"`
+	ProfileName      string    `json:"profileName" gorm:"column:profile_name"`
 	CreatedAt        time.Time `json:"createdAt" gorm:"autoCreateTime"`
 
 	// Advanced Settings

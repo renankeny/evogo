@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Send, CheckCircle2, AlertCircle, Sparkles, Smartphone, Loader2 } from "lucide-react";
+import { Send, CheckCircle2, AlertCircle, Sparkles, Smartphone, Loader2, ChevronDown } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { instancesService } from "@/services/instancesService";
+import { getInstanceStatus } from "@/utils/instanceStatus";
 import type { InstanceDTO } from "@/types/InstanceDTO";
 
 export interface QuickSendModalProps {
@@ -48,7 +49,7 @@ export function QuickSendModal({
   }, [isOpen]);
 
   const selectedInstance = instances.find((i) => i.id === selectedInstanceId);
-  const isInstanceConnected = selectedInstance?.connected || selectedInstance?.status === "open";
+  const isInstanceConnected = selectedInstance ? getInstanceStatus(selectedInstance).isOnline : false;
 
   const quickTemplates = [
     "🚀 Olá! Mensagem de teste enviada pelo painel Evolution GO.",
@@ -112,18 +113,19 @@ export function QuickSendModal({
             <select
               value={selectedInstanceId}
               onChange={(e) => setSelectedInstanceId(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer"
+              className="w-full rounded-md border border-input bg-background pl-3 pr-9 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer"
             >
               {instances.map((inst) => {
-                const isConn = inst.connected || inst.status === "open";
+                const status = getInstanceStatus(inst);
                 return (
                   <option key={inst.id} value={inst.id}>
-                    {inst.name} {isConn ? "(Online 🟢)" : "(Desconectada 🔴)"}{" "}
+                    {inst.name} ({status.label} {status.isOnline ? "🟢" : status.isConnecting ? "🟡" : "🔴"}){" "}
                     {inst.owner ? `- +${inst.owner}` : ""}
                   </option>
                 );
               })}
             </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           </div>
           {!isInstanceConnected && selectedInstance && (
             <p className="mt-1 text-xs text-amber-500 flex items-center gap-1">

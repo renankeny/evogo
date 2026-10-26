@@ -23,6 +23,7 @@ export interface InstanceDTO {
   createdAt: string;
   alwaysOnline?: boolean;
   rejectCall?: boolean;
+  msgRejectCall?: string;
   readMessages?: boolean;
   ignoreGroups?: boolean;
   ignoreStatus?: boolean;

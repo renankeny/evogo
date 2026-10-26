@@ -114,6 +114,7 @@ func (r *Routes) AssignRoutes(eng *gin.Engine) {
 		routes.Use(r.authMiddleware.AuthAdminOrInstance)
 		{
 			routes.GET("/info/:instanceId", r.instanceHandler.Info)
+			routes.GET("/connectionState/:instanceId", r.instanceHandler.ConnectionState)
 		}
 	}
 

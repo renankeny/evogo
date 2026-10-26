@@ -52,7 +52,7 @@ export default function InstancesPage() {
 
     const timer = setInterval(() => {
       fetchInstances(true);
-    }, 1500);
+    }, 2000);
 
     return () => clearInterval(timer);
   }, [isQrModalOpen, isModalConnected, fetchInstances]);
@@ -80,7 +80,15 @@ export default function InstancesPage() {
     setQrLoading(true);
     try {
       await connectInstance(instance.apikey);
-      const qr = await getQrCode(instance.apikey);
+      let qr = "";
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          qr = await getQrCode(instance.apikey);
+          if (qr) break;
+        } catch (_) {
+          await new Promise((r) => setTimeout(r, 1200));
+        }
+      }
       setQrCodeBase64(qr);
     } catch (e) {
       console.error("Erro ao conectar instância:", e);

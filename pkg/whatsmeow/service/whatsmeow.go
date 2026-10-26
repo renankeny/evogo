@@ -452,7 +452,7 @@ func (w whatsmeowService) StartClient(cd *ClientData) {
 		}
 	}
 
-	client.EnableAutoReconnect = false
+	client.EnableAutoReconnect = true
 	client.AutoTrustIdentity = true
 
 	mycli := &MyClient{
@@ -897,6 +897,36 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		if err != nil {
 			mycli.loggerWrapper.GetLogger(mycli.userID).LogError("[%s] Error clearing instance qrcode: %s", mycli.Instance.Id, err)
 		}
+
+		// Atualiza PushName e busca Foto de Perfil em background
+		go func(cli *MyClient) {
+			time.Sleep(2 * time.Second)
+			if cli == nil || cli.WAClient == nil || !cli.WAClient.IsConnected() || cli.WAClient.Store.ID == nil {
+				return
+			}
+			pushName := cli.WAClient.Store.PushName
+			userJID := cli.WAClient.Store.ID.ToNonAD()
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+
+			cli.loggerWrapper.GetLogger(cli.userID).LogInfo("[%s] Fetching profile picture for user JID: %s", cli.userID, userJID.String())
+			pic, err := cli.WAClient.GetProfilePictureInfo(ctx, userJID, &whatsmeow.GetProfilePictureParams{
+				Preview: true,
+			})
+			picUrl := ""
+			if err == nil && pic != nil && pic.URL != "" {
+				picUrl = pic.URL
+				cli.loggerWrapper.GetLogger(cli.userID).LogInfo("[%s] Profile picture fetched successfully: %s", cli.userID, picUrl)
+			} else {
+				cli.loggerWrapper.GetLogger(cli.userID).LogWarn("[%s] Could not fetch profile picture: %v", cli.userID, err)
+			}
+
+			if pushName != "" || picUrl != "" {
+				cli.Instance.ProfileName = pushName
+				cli.Instance.ProfilePicUrl = picUrl
+				_ = cli.instanceRepository.UpdateProfileInfo(cli.Instance.Id, pushName, picUrl)
+			}
+		}(mycli)
 
 		doWebhook = true
 		postMap["event"] = "Connected"
@@ -2425,9 +2455,9 @@ func (w whatsmeowService) ConnectOnStartup(clientName string) {
 	var err error
 
 	if clientName != "" {
-		instances, err = w.instanceRepository.GetAllConnectedInstancesByClientName(clientName)
+		instances, err = w.instanceRepository.GetAll(clientName)
 		if err != nil {
-			w.loggerWrapper.GetLogger(clientName).LogError("[%s] Error getting all connected instances: %s", clientName, err)
+			w.loggerWrapper.GetLogger(clientName).LogError("[%s] Error getting all instances: %s", clientName, err)
 			return
 		}
 	} else {
@@ -2438,10 +2468,10 @@ func (w whatsmeowService) ConnectOnStartup(clientName string) {
 		}
 	}
 
-	w.loggerWrapper.GetLogger(clientName).LogInfo("[%s] Found %d connected instances", clientName, len(instances))
+	w.loggerWrapper.GetLogger(clientName).LogInfo("[%s] Found %d instances to connect on startup", clientName, len(instances))
 
 	for _, instance := range instances {
-		w.loggerWrapper.GetLogger(clientName).LogInfo("[%s] Starting client for user '%s'", clientName, instance.Id)
+		w.loggerWrapper.GetLogger(clientName).LogInfo("[%s] Starting/reconnecting client for user '%s' (%s)", clientName, instance.Id, instance.Name)
 
 		err := w.StartInstance(instance.Id)
 		if err != nil {

@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, BookOpen, Terminal, Key, Globe, ExternalLink, Send } from "lucide-react";
+import { Plus, BookOpen, Terminal, Key, Globe, ExternalLink, Send, Copy, Check } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { maskApiKey } from "@/utils/maskApiKey";
@@ -20,6 +20,23 @@ export function QuickActionsCard({
   onOpenCreateModal,
   onOpenQuickSend,
 }: QuickActionsCardProps) {
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+
+  const handleCopyUrl = () => {
+    if (!apiUrl) return;
+    navigator.clipboard.writeText(apiUrl);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2000);
+  };
+
+  const handleCopyKey = () => {
+    if (!apiKey) return;
+    navigator.clipboard.writeText(apiKey);
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
+  };
+
   const swaggerUrl = `${apiUrl.replace(/\/$/, "")}/swagger/index.html`;
 
   return (
@@ -62,19 +79,43 @@ export function QuickActionsCard({
         </div>
 
         <div className="rounded-lg border border-border/80 bg-muted/30 p-3 text-xs space-y-2">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-            <span className="text-muted-foreground flex items-center gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+            <span className="text-muted-foreground flex items-center gap-1.5 shrink-0">
               <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               URL da API:
             </span>
-            <span className="font-mono font-medium text-foreground break-all">{apiUrl || "-"}</span>
+            <div className="flex items-center gap-1.5 max-w-full overflow-hidden">
+              <span className="font-mono font-medium text-foreground truncate">{apiUrl || "-"}</span>
+              {apiUrl && (
+                <button
+                  type="button"
+                  onClick={handleCopyUrl}
+                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+                  title="Copiar URL da API"
+                >
+                  {copiedUrl ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-            <span className="text-muted-foreground flex items-center gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+            <span className="text-muted-foreground flex items-center gap-1.5 shrink-0">
               <Key className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               Chave Global:
             </span>
-            <span className="font-mono font-medium text-foreground">{maskApiKey(apiKey)}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono font-medium text-foreground">{maskApiKey(apiKey)}</span>
+              {apiKey && (
+                <button
+                  type="button"
+                  onClick={handleCopyKey}
+                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+                  title="Copiar Chave Global"
+                >
+                  {copiedKey ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
